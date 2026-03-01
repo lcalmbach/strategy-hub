@@ -124,7 +124,7 @@ uv run ruff check .
 The repository now includes a basic Heroku deployment setup:
 
 - [Procfile](/home/lcalm/Work/Dev/strategyhub/Procfile)
-- [requirements.txt](/home/lcalm/Work/Dev/strategyhub/requirements.txt)
+- [uv.lock](/home/lcalm/Work/Dev/strategyhub/uv.lock)
 - [runtime.txt](/home/lcalm/Work/Dev/strategyhub/runtime.txt)
 - environment-based production settings in [config/settings.py](/home/lcalm/Work/Dev/strategyhub/config/settings.py)
 

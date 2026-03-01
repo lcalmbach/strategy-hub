@@ -9,6 +9,8 @@ dependencies = [
     "iommi>=7.18",
     "psycopg[binary]>=3.2",
     "Pillow>=11.0",
+    "gunicorn>=23.0",
+    "whitenoise>=6.8",
 ]
 
 [dependency-groups]
