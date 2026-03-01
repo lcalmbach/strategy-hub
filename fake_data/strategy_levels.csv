@@ -1,0 +1,19 @@
+strategy_title,level,title,short_code,description,parent_short_code,sort_order,is_active,measure_type_code
+Amtsstrategie 2020 - 2024,handlungsfeld,Fuehrung und Steuerung staerken,AS-HF-1,Verbindliche Steuerung und klare Verantwortungen etablieren,,10,true,
+Amtsstrategie 2020 - 2024,handlungsfeld,Zusammenarbeit verbessern,AS-HF-2,Teamuebergreifende Zusammenarbeit und Effizienz erhoehen,,20,true,
+Amtsstrategie 2020 - 2024,ziel,Rollenklarheit schaffen,AS-Z-1,Verantwortungen sollen transparent dokumentiert und gelebt werden,AS-HF-1,11,true,
+Amtsstrategie 2020 - 2024,ziel,Sitzungsformate optimieren,AS-Z-2,Regelmeetings sollen effizienter und verbindlicher werden,AS-HF-2,21,true,
+Amtsstrategie 2020 - 2024,massnahme,Fuehrungsleitbild aktualisieren,AS-M-1,Leitbild und Entscheidungsprinzipien ueberarbeiten,AS-Z-1,12,true,vorhaben
+Amtsstrategie 2020 - 2024,massnahme,Weekly-Format neu konzipieren,AS-M-2,Abstimmungsmeetings vereinfachen und standardisieren,AS-Z-2,22,true,sondermassnahme
+Kommunikationsstrategie 2020 - 2024,handlungsfeld,Interne Kommunikation verbessern,KS-HF-1,Informationsfluss innerhalb des Amts vereinheitlichen,,10,true,
+Kommunikationsstrategie 2020 - 2024,handlungsfeld,Externe Sichtbarkeit steigern,KS-HF-2,Oeffentliche Kommunikation verstaendlicher und wirkungsvoller machen,,20,true,
+Kommunikationsstrategie 2020 - 2024,ziel,Informationswege standardisieren,KS-Z-1,Regelkommunikation soll nachvollziehbar und verbindlich sein,KS-HF-1,11,true,
+Kommunikationsstrategie 2020 - 2024,ziel,Publikationsqualitaet erhoehen,KS-Z-2,Inhalte fuer externe Kanaele sollen einheitlicher aufbereitet werden,KS-HF-2,21,true,
+Kommunikationsstrategie 2020 - 2024,massnahme,Intranet-Newsprozess definieren,KS-M-1,Redaktion und Freigaben fuer interne News standardisieren,KS-Z-1,12,true,prozess
+Kommunikationsstrategie 2020 - 2024,massnahme,Vorlagen fuer Medieninhalte entwickeln,KS-M-2,Vorlagen fuer Website und Medienmitteilungen bereitstellen,KS-Z-2,22,true,projekt
+Datenstrategie 2020 - 2024,handlungsfeld,Datenqualitaet sichern,DS-HF-1,Verantwortung und Standards fuer belastbare Daten etablieren,,10,true,
+Datenstrategie 2020 - 2024,handlungsfeld,Datennutzung ausbauen,DS-HF-2,Datenprodukte und Nutzung im Amt weiterentwickeln,,20,true,
+Datenstrategie 2020 - 2024,ziel,Qualitaetsstandards etablieren,DS-Z-1,Regeln fuer Stammdaten und Fachdatensaetze verbindlich festlegen,DS-HF-1,11,true,
+Datenstrategie 2020 - 2024,ziel,Self-Service Reporting etablieren,DS-Z-2,Berichte sollen schneller und dezentral erstellt werden,DS-HF-2,21,true,
+Datenstrategie 2020 - 2024,massnahme,Metadatenprozess einfuehren,DS-M-1,Einheitlicher Prozess fuer Datenkatalog und Metadaten,DS-Z-1,12,true,prozess
+Datenstrategie 2020 - 2024,massnahme,BI-Pilot fuer Fachbereiche,DS-M-2,Pilot fuer standardisierte Self-Service Dashboards,DS-Z-2,22,true,projekt

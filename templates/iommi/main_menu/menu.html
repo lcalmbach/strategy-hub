@@ -1,0 +1,172 @@
+{% block above %}{% endblock %}
+<style>
+    
+    .main_menu {
+        --iommi-menu-background-color: #b0e0e6;
+        --iommi-menu-text-color-color: #17323b;
+        background-color: var(--iommi-menu-background-color);
+        color: var(--iommi-menu-text-color-color);
+    }
+
+    .main_menu nav {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .main_menu nav > ul {
+        margin: 0;
+        padding-top: 0.25rem;
+    }
+
+    .main_menu #menu-logo {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        text-align: middle;
+        padding: 1.1rem 1rem 0.9rem;
+        color: #12313a;
+        width: 100%;
+        margin: 0;
+    }
+
+    .main_menu #menu-logo:hover {
+        background: rgba(255, 255, 255, 0.18);
+        color: #12313a !important;
+    }
+
+    .main_menu .menu-logo-text {
+        font-size: 1.4rem;
+        line-height: 1.1;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+        text-align: left;
+    }
+
+    .main_menu .menu-logo-image {
+        display: block;
+        width: 88px;
+        height: 88px;
+        margin: 0 0 0.7rem;
+        object-fit: contain;
+        border-radius: 18px;
+        box-shadow: 0 10px 24px rgba(18, 49, 58, 0.12);
+        background: rgba(255, 255, 255, 0.55);
+    }
+
+    .main_menu .active-strategy-chip {
+        margin: 0 1rem 1rem;
+        padding: 0.75rem 0.9rem;
+        border: 1px solid rgba(18, 49, 58, 0.12);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.42);
+        color: #17323b;
+    }
+
+    .main_menu .active-strategy-label {
+        display: block;
+        margin-bottom: 0.2rem;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(23, 50, 59, 0.75);
+    }
+
+    .main_menu .active-strategy-name {
+        display: block;
+        font-size: 0.98rem;
+        font-weight: 700;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .main_menu .app-version {
+        margin: auto 1rem 1rem;
+        padding-top: 0.8rem;
+        border-top: 1px solid rgba(18, 49, 58, 0.12);
+        font-size: 0.78rem;
+        color: rgba(23, 50, 59, 0.72);
+    }
+
+    .main_menu a {
+        color: var(--iommi-menu-text-color-color);
+    }
+
+    .main_menu li.is_active > details > summary > a,
+    .main_menu li.is_active > a {
+        color: #0d2b33;
+        background: rgba(255, 255, 255, 0.28);
+    }
+
+    .main_menu a:hover,
+    .main_menu a:hover i,
+    .main_menu summary:hover,
+    .main_menu summary:hover a span,
+    .main_menu details > summary:hover a::after,
+    .main_menu #compact_menu_toggler:hover {
+        background-color: rgba(255, 255, 255, 0.32);
+        color: #0d2b33 !important;
+    }
+
+    .primary_action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.72rem 1.15rem;
+        border: 1px solid rgba(15, 92, 77, 0.16);
+        border-radius: 999px;
+        text-decoration: none;
+        font-family: "Manrope", "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 0.95rem;
+        font-weight: 700;
+        line-height: 1;
+        color: #fff !important;
+        background: linear-gradient(135deg, #0f5c4d, #2f7e72);
+        box-shadow: 0 10px 22px rgba(15, 92, 77, 0.18);
+        transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+    }
+
+    .primary_action:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.02);
+        box-shadow: 0 14px 26px rgba(15, 92, 77, 0.22);
+        color: #fff !important;
+    }
+
+    .iommi-table-container [class*="links"] {
+        display: flex;
+        justify-content: flex-end;
+        margin: 0 0 1rem;
+    }
+</style>
+
+<div{{ main_menu.attrs }}>
+
+    <nav>
+        {% block before_ul %}
+            <a id="menu-logo" href="/">
+                <img class="menu-logo-image" src="/media/strategies/logo.jpeg" alt="Strategy-Hub Logo">
+                <div class="menu-logo-text"> StatA-Strategy-Hub </div>
+            </a>
+            {% if active_strategy %}
+                <div class="active-strategy-chip">
+                    <span class="active-strategy-label">Aktive Strategie</span>
+                    <span class="active-strategy-name">{{ active_strategy.title }}</span>
+                </div>
+            {% endif %}
+        {% endblock %}
+        <ul>
+            {% block before_items %}{% endblock %}
+
+            {{ main_menu.render_items }}
+
+            {% block after_items %}{% endblock %}
+        </ul>
+        {% block after_ul %}{% endblock %}
+    </nav>
+
+
+    {% block bottom %}{% endblock %}
+    <div class="app-version">Version {{ app_version }}</div>
+</div>

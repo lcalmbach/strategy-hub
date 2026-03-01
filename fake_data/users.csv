@@ -1,0 +1,6 @@
+username,email,first_name,last_name,is_staff,is_superuser,is_active,password
+lcalm,lcalm@example.com,Lukas,Calm,true,true,true,password
+anna.mueller,anna.mueller@example.com,Anna,Mueller,false,false,true,password
+marco.keller,marco.keller@example.com,Marco,Keller,false,false,true,password
+sara.roth,sara.roth@example.com,Sara,Roth,false,false,true,password
+tom.fischer,tom.fischer@example.com,Tom,Fischer,false,false,true,password

@@ -1,0 +1,27 @@
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label" for="ziele-handlungsfeld-filter">Handlungsfeld</label>
+                <select class="form-select" id="ziele-handlungsfeld-filter" name="handlungsfeld_filter" onchange="this.form.submit()">
+                    <option value="">Bitte waehlen</option>
+                    {% for handlungsfeld in fragment.extra.handlungsfelder %}
+                        <option value="{{ handlungsfeld.pk }}" {% if fragment.extra.selected_handlungsfeld_id == handlungsfeld.pk|stringformat:'s' %}selected{% endif %}>
+                            {{ handlungsfeld.title }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 d-flex gap-2 justify-content-md-end">
+                <a class="btn btn-outline-secondary" href="/strategies/ziele/">Zuruecksetzen</a>
+                <a
+                    class="primary_action{% if fragment.extra.new_disabled %} disabled{% endif %}"
+                    href="{{ fragment.extra.new_href }}"
+                    {% if fragment.extra.new_disabled %}aria-disabled="true" style="pointer-events: none; opacity: 0.65;"{% endif %}
+                >
+                    Neu
+                </a>
+            </div>
+        </form>
+    </div>
+</div>

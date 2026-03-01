@@ -1,0 +1,258 @@
+# Projektbeschreibung Strategy Hub
+
+## Einführung
+Strategy Hub ist eine Webplattform für das Statistische Amt Basel-Stadt zur strukturierten Verwaltung von Strategien und zum operativen Controlling der dazugehörigen Massnahmen.
+
+Die Plattform soll insbesondere drei Probleme lösen:
+- Strategien und ihre Hierarchie sollen zentral erfasst und gepflegt werden.
+- Massnahmen sollen über klar definierte Controlling-Perioden geplant und nachverfolgt werden.
+- Verantwortlichkeiten, Aufwand, Kosten und Zielerreichung sollen transparent auswertbar sein.
+
+## Zielbild
+Die Anwendung bildet eine Strategie in folgender Hierarchie ab:
+- Strategie
+- Handlungsfelder
+- Ziele
+- Massnahmen
+- periodische Controlling-Records je Massnahme
+
+Die Benutzer sollen Strategien nicht nur dokumentieren, sondern aktiv steuern können. Im Zentrum steht deshalb der Controlling-Prozess und nicht nur die Stammdatenpflege.
+
+## Fachliche Ziele
+- Strategien erfassen, versionieren und aktualisieren
+- Handlungsfelder, Ziele und Massnahmen hierarchisch verwalten
+- Verantwortliche Personen und Rollen zuordnen
+- Für jede Massnahme periodisch Plan- und Ist-Daten erfassen
+- Plan/Ist-Abweichungen auf Dashboard und Listen sichtbar machen
+- Offene, laufende und abgeschlossene Controlling-Zyklen nachvollziehbar darstellen
+
+## Nicht-Ziele in der ersten Version
+- Kein komplexes Workflow- oder BPM-System
+- Keine Budgetplanung auf Ebene Gesamtorganisation
+- Keine Dokumentenablage mit Volltextsuche
+- Keine externe BI-Lösung; Auswertungen erfolgen zunächst innerhalb der Webanwendung
+
+## Benutzerrollen
+Folgende Rollen werden für die erste Version angenommen:
+- Administrator: verwaltet Stammdaten, Benutzer, Perioden und Systemeinstellungen
+- Strategieverantwortlicher: pflegt Strategien und Hierarchien
+- Massnahmenverantwortlicher: erfasst Plan- und Ist-Werte für zugewiesene Massnahmen
+- Controlling: eröffnet Perioden, überwacht Datenqualität und wertet Ergebnisse aus
+- Leseberechtigte Benutzer: können Strategien und Auswertungen ansehen
+
+## Technologischer Rahmen
+- Backend: Python mit Django
+- UI und CRUD-Logik: iommi
+- Paket- und Umgebungsmanagement: uv
+- Datenbank: primär PostgreSQL
+- Authentifizierung: Django-Authentifizierung mit erweitertem Benutzerprofil
+
+## Fachmodell
+
+### 1. Strategie
+Eine Strategie ist das oberste fachliche Objekt.
+
+Vorgesehene Felder:
+- Titel
+- Kurzbeschreibung
+- Bild fuer die Anzeige
+- Link auf Referenzdokument
+- Gueltig von
+- Gueltig bis
+- Status: `geplant`, `aktiv`, `inaktiv`, `abgeschlossen`
+- Vision
+- Mission
+- Erstellt am
+- Aktualisiert am
+
+### 2. Strategieebene
+Handlungsfeld, Ziel und Massnahme werden in einer gemeinsamen Tabelle `StrategieEbene` modelliert. Dadurch bleibt die Hierarchie einfach und flexibel.
+
+Vorgesehene Felder:
+- Strategie (FK auf Strategie)
+- Ebene: `handlungsfeld`, `ziel`, `massnahme`
+- Titel
+- Kuerzel
+- Beschreibung
+- Parent (FK auf `StrategieEbene`, optional)
+- Sortierung
+- Aktiv
+- Massnahme-Typ: z.B. `projekt`, `prozess`, `vorhaben`, `sondermassnahme` (nur fuer Ebene `massnahme`)
+
+Fachliche Regeln:
+- Ein Handlungsfeld hat keinen Parent.
+- Ein Ziel muss genau ein Handlungsfeld als Parent haben.
+- Eine Massnahme muss genau ein Ziel als Parent haben.
+- Controlling ist nur fuer Eintraege der Ebene `massnahme` erlaubt.
+
+### 3. Person
+Die Person erweitert den Django-Benutzer um fachliche Angaben.
+
+Vorgesehene Felder:
+- User (One-to-One auf Django User)
+- Funktion
+- Kuerzel
+- Organisationseinheit
+- Aktiv
+
+### 4. Verantwortlichkeit
+Verantwortlichkeiten sollen sowohl dauerhaft auf einer Massnahme als auch periodenspezifisch auf einem Controlling-Record abbildbar sein.
+
+Fuer die erste Version wird folgende pragmatische Loesung empfohlen:
+- `MassnahmenVerantwortlichkeit`
+- `ControllingRecordVerantwortlichkeit`
+
+Moegliche Felder:
+- Person (FK)
+- Rolle: z.B. `verantwortlich`, `mitverantwortlich`, `unterstuetzend`, `freigebend`
+- Gueltig von
+- Gueltig bis
+
+### 5. Controlling-Record
+Ein Controlling-Record beschreibt eine konkrete Controlling-Periode einer Massnahme.
+
+Vorgesehene Felder:
+- Massnahme (FK auf `StrategieEbene`)
+- Jahr
+- Monat
+- Periodenstart
+- Periodenende
+- Status: `offen`, `in_planung`, `in_ist_erfassung`, `abgeschlossen`
+
+Plan-Felder:
+- Plan-Ergebnis-Beschreibung
+- Plan-Aufwand-Personentage
+- Plan-Aufwand-Beschreibung
+- Plan-Kosten-CHF
+- Plan-Kosten-Beschreibung
+
+Ist-Felder:
+- Ist-Erfuellungsgrad-Prozent
+- Ist-Ergebnis-Beschreibung
+- Ist-Aufwand-Personentage
+- Ist-Aufwand-Beschreibung
+- Ist-Kosten-CHF
+- Ist-Kosten-Beschreibung
+
+Technische Zusatzfelder:
+- Erstellt am
+- Aktualisiert am
+- Erstellt von
+- Aktualisiert von
+
+Fachliche Regeln:
+- Pro Massnahme und Periode darf es nur einen Controlling-Record geben.
+- Ist-Felder duerfen erst nach Periodenstart oder nach Freigabe der Periode bearbeitet werden.
+- Erfuellungsgrad liegt zwischen 0 und 100.
+
+## Kernprozesse
+
+### 1. Strategie pflegen
+- Strategien anlegen und bearbeiten
+- Hierarchie aus Handlungsfeldern, Zielen und Massnahmen erfassen
+- Verantwortliche zuordnen
+
+### 2. Controlling-Periode initialisieren
+- Eine neue Periode wird durch das Controlling oder die Administration eroeffnet.
+- Fuer jede aktive Massnahme wird automatisch ein Controlling-Record erzeugt.
+- Zugewiesene verantwortliche Personen werden benachrichtigt.
+
+### 3. Plan-Erfassung
+- Verantwortliche erfassen Zielbild, Aufwand und Kosten fuer die laufende Periode.
+- Controlling prueft Vollstaendigkeit und Plausibilitaet.
+
+### 4. Ist-Erfassung
+- Nach Ablauf oder waehrend der Periode werden Ist-Daten nachgetragen.
+- Die Zielerreichung wird in Prozent und als Text dokumentiert.
+
+### 5. Auswertung
+- Dashboard zeigt offene Datenerfassungen, laufende Perioden und Plan/Ist-Abweichungen.
+- Listen und Detailseiten erlauben Drilldown von Strategie bis Massnahme.
+
+## Validierungen und fachliche Randbedingungen
+- Pflichtfelder unterscheiden sich je nach Objektart.
+- Eine Massnahme ohne uebergeordnetes Ziel ist ungueltig.
+- Ein Ziel ohne Handlungsfeld ist ungueltig.
+- Periodenstart darf nicht nach Periodenende liegen.
+- `Monat` und `Jahr` muessen mit der Periode konsistent sein, falls beide separat gespeichert werden.
+- Massnahme-Typ ist nur fuer Massnahmen pflegbar.
+
+## Anforderungen an die Benutzeroberflaeche
+
+### Navigation
+Geplante Hauptnavigation:
+- Home
+- Strategien
+- Handlungsfelder
+- Ziele
+- Massnahmen
+- Controlling-Records
+- Administration
+
+### Seiten und Funktionen
+`Home`
+- Dashboard mit Kennzahlen, offenen Aufgaben und Plan/Ist-Abweichungen
+- Uebersicht ueber aktive Strategien und laufende Perioden
+
+`Strategien`
+- Liste aller Strategien
+- Detailseite mit Vision, Mission, Laufzeit und hierarchischer Struktur
+
+`Handlungsfelder`, `Ziele`, `Massnahmen`
+- gefilterte Listen auf Basis der Tabelle `StrategieEbene`
+- Suche, Filter, Status und Direktnavigation zur Hierarchie
+
+`Controlling-Records`
+- Listenansicht mit Filter nach Jahr, Monat, Status, Strategie und verantwortlicher Person
+- Bearbeitungsansicht fuer Plan- und Ist-Felder
+
+`Administration`
+- Periode eroeffnen
+- automatische Generierung der Controlling-Records
+- Benutzer- und Rollenpflege
+- Stammdaten fuer Massnahme-Typen und Rollen
+
+## Berichtswesen und Kennzahlen
+Fuer die erste Version werden folgende Kennzahlen benoetigt:
+- Anzahl aktiver Strategien
+- Anzahl Handlungsfelder, Ziele und Massnahmen
+- Anzahl offene Controlling-Records
+- Anteil abgeschlossener Controlling-Records pro Periode
+- Summe Plan-Kosten vs. Summe Ist-Kosten
+- Summe Plan-Personentage vs. Summe Ist-Personentage
+- durchschnittlicher Erfuellungsgrad pro Strategie
+
+## Benachrichtigungen
+In einer ersten Ausbaustufe sind einfache E-Mail-Benachrichtigungen ausreichend:
+- bei Eroeffnung einer neuen Controlling-Periode
+- bei fehlenden Plan-Angaben
+- bei faelligen oder ueberfaelligen Ist-Angaben
+
+## Empfehlungen fuer die technische Umsetzung
+- Django-Apps sinnvoll nach Domane schneiden, z.B. `strategies`, `controlling`, `people`
+- `StrategieEbene` mit klaren Model-Validierungen absichern
+- iommi fuer Tabellen, Formulare, Filter und Detailseiten konsequent einsetzen
+- Berechtigungen frueh definieren, damit UI und Datenmodell nicht auseinanderlaufen
+- Auditing-Felder von Beginn an vorsehen
+
+## Offene Punkte fuer die fachliche Klaerung
+Folgende Punkte sind fuer die Codierung noch zu bestaetigen:
+- Soll eine Strategie mehrere Versionen ueber die Zeit haben oder reicht einfaches Bearbeiten?
+- Sollen Verantwortlichkeiten nur periodenspezifisch oder auch dauerhaft an Massnahmen haengen?
+- Ist `Jahr` und `Monat` im Controlling-Record wirklich notwendig, wenn bereits Start- und Enddatum existieren?
+- Welche Statuswerte werden fachlich definitiv benoetigt?
+- Welche Rollen duerfen Daten nur lesen und welche duerfen freigeben?
+- Werden Benachrichtigungen sofort beim Start benoetigt oder koennen sie zunaechst als Platzhalter implementiert werden?
+
+## Anschlussdokument
+Das technische Umsetzungsdesign wurde als separates Dokument erstellt:
+- `technical-design.md`
+
+Es enthaelt insbesondere:
+- Django-App-Struktur
+- Datenbankmodelle
+- Berechtigungskonzept
+- Service-Schnitt fuer Controlling-Prozesse
+- ersten MVP-Umfang und empfohlene Implementierungsreihenfolge
+
+

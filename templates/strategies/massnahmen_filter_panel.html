@@ -1,0 +1,38 @@
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label" for="massnahmen-handlungsfeld-filter">Handlungsfeld</label>
+                <select class="form-select" id="massnahmen-handlungsfeld-filter" name="handlungsfeld_filter" onchange="this.form.elements['ziel_filter'].value=''; this.form.submit()">
+                    <option value="">Alle</option>
+                    {% for handlungsfeld in fragment.extra.handlungsfelder %}
+                        <option value="{{ handlungsfeld.pk }}" {% if fragment.extra.selected_handlungsfeld_id == handlungsfeld.pk|stringformat:'s' %}selected{% endif %}>
+                            {{ handlungsfeld.title }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="massnahmen-ziel-filter">Ziel</label>
+                <select class="form-select" id="massnahmen-ziel-filter" name="ziel_filter" onchange="this.form.submit()">
+                    <option value="">Bitte waehlen</option>
+                    {% for ziel in fragment.extra.ziele %}
+                        <option value="{{ ziel.pk }}" {% if fragment.extra.selected_ziel_id == ziel.pk|stringformat:'s' %}selected{% endif %}>
+                            {{ ziel.title }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex gap-2 justify-content-md-end">
+                <a class="btn btn-outline-secondary" href="/strategies/massnahmen/">Zuruecksetzen</a>
+                <a
+                    class="primary_action{% if fragment.extra.new_disabled %} disabled{% endif %}"
+                    href="{{ fragment.extra.new_href }}"
+                    {% if fragment.extra.new_disabled %}aria-disabled="true" style="pointer-events: none; opacity: 0.65;"{% endif %}
+                >
+                    Neu
+                </a>
+            </div>
+        </form>
+    </div>
+</div>

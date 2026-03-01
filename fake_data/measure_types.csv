@@ -1,0 +1,5 @@
+code,label,is_active
+projekt,Projekt,true
+prozess,Prozess,true
+vorhaben,Vorhaben,true
+sondermassnahme,Sondermassnahme,true
