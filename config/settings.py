@@ -21,6 +21,14 @@ def env_list(name: str, default: list[str]) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def dedupe_list(values: list[str]) -> list[str]:
+    result = []
+    for value in values:
+        if value and value not in result:
+            result.append(value)
+    return result
+
+
 def sqlite_database_config() -> dict:
     return {
         "ENGINE": "django.db.backends.sqlite3",
@@ -67,6 +75,12 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-change-me")
 DEBUG = env_bool("DJANGO_DEBUG", True)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", ["localhost", "127.0.0.1", "testserver"])
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", [])
+
+heroku_app_name = os.getenv("HEROKU_APP_NAME")
+if heroku_app_name:
+    heroku_host = f"{heroku_app_name}.herokuapp.com"
+    ALLOWED_HOSTS = dedupe_list([*ALLOWED_HOSTS, heroku_host])
+    CSRF_TRUSTED_ORIGINS = dedupe_list([*CSRF_TRUSTED_ORIGINS, f"https://{heroku_host}"])
 
 if not DEBUG and SECRET_KEY == "django-insecure-change-me":
     raise RuntimeError("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false.")
