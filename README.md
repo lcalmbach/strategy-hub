@@ -125,7 +125,7 @@ The repository now includes a basic Heroku deployment setup:
 
 - [Procfile](/home/lcalm/Work/Dev/strategyhub/Procfile)
 - [uv.lock](/home/lcalm/Work/Dev/strategyhub/uv.lock)
-- [runtime.txt](/home/lcalm/Work/Dev/strategyhub/runtime.txt)
+- [.python-version](/home/lcalm/Work/Dev/strategyhub/.python-version)
 - environment-based production settings in [config/settings.py](/home/lcalm/Work/Dev/strategyhub/config/settings.py)
 
 Required config vars:
