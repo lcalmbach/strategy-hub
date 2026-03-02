@@ -29,6 +29,23 @@ def dedupe_list(values: list[str]) -> list[str]:
     return result
 
 
+def build_s3_media_url(bucket_name: str, region_name: str, custom_domain: str, location: str) -> str:
+    if custom_domain:
+        domain = custom_domain
+        path = f"/{location}/" if location else "/"
+        return f"https://{domain}{path}"
+
+    # Buckets with dots break the default virtual-hosted HTTPS certificate matching.
+    if "." in bucket_name:
+        base = f"https://s3.{region_name}.amazonaws.com/{bucket_name}" if region_name else f"https://s3.amazonaws.com/{bucket_name}"
+        path = f"/{location}/" if location else "/"
+        return f"{base}{path}"
+
+    domain = f"{bucket_name}.s3.{region_name}.amazonaws.com" if region_name else f"{bucket_name}.s3.amazonaws.com"
+    path = f"/{location}/" if location else "/"
+    return f"https://{domain}{path}"
+
+
 def sqlite_database_config() -> dict:
     return {
         "ENGINE": "django.db.backends.sqlite3",
@@ -170,6 +187,7 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "").strip()
 AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "").strip()
 AWS_S3_CUSTOM_DOMAIN = os.getenv("AWS_S3_CUSTOM_DOMAIN", "").strip()
+AWS_MEDIA_BASE_URL = os.getenv("AWS_MEDIA_BASE_URL", "").strip().rstrip("/")
 AWS_MEDIA_LOCATION = os.getenv("AWS_MEDIA_LOCATION", "").strip("/")
 AWS_QUERYSTRING_AUTH = env_bool("AWS_QUERYSTRING_AUTH", False)
 
@@ -177,13 +195,16 @@ MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "media/"
 
 if AWS_STORAGE_BUCKET_NAME:
-    media_domain = AWS_S3_CUSTOM_DOMAIN or (
-        f"{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
-        if AWS_S3_REGION_NAME
-        else f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
-    )
-    media_path = f"/{AWS_MEDIA_LOCATION}/" if AWS_MEDIA_LOCATION else "/"
-    MEDIA_URL = f"https://{media_domain}{media_path}"
+    if AWS_MEDIA_BASE_URL:
+        media_path = f"/{AWS_MEDIA_LOCATION}/" if AWS_MEDIA_LOCATION else "/"
+        MEDIA_URL = f"{AWS_MEDIA_BASE_URL}{media_path}"
+    else:
+        MEDIA_URL = build_s3_media_url(
+            bucket_name=AWS_STORAGE_BUCKET_NAME,
+            region_name=AWS_S3_REGION_NAME,
+            custom_domain=AWS_S3_CUSTOM_DOMAIN,
+            location=AWS_MEDIA_LOCATION,
+        )
 
 STORAGES = {
     "default": {
@@ -202,6 +223,8 @@ if AWS_STORAGE_BUCKET_NAME and find_spec("storages") is not None:
         s3_options["location"] = AWS_MEDIA_LOCATION
     if AWS_S3_CUSTOM_DOMAIN:
         s3_options["custom_domain"] = AWS_S3_CUSTOM_DOMAIN
+    if "." in AWS_STORAGE_BUCKET_NAME and not AWS_S3_CUSTOM_DOMAIN:
+        s3_options["addressing_style"] = "path"
 
     STORAGES["default"] = {
         "BACKEND": "storages.backends.s3.S3Storage",
