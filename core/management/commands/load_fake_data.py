@@ -254,13 +254,13 @@ class Command(BaseCommand):
     def _load_controlling_periods(self):
         periods = {}
         for row in read_csv("controlling_periods.csv"):
+            strategy = Strategy.objects.get(title=row["strategy_title"])
             period, _ = ControllingPeriod.objects.update_or_create(
-                year=as_int(row["year"]),
-                month=as_int(row["month"]),
+                strategy=strategy,
+                start_date=as_date(row["start_date"]),
+                end_date=as_date(row["end_date"]),
                 defaults={
                     "name": row["name"],
-                    "start_date": as_date(row["start_date"]),
-                    "end_date": as_date(row["end_date"]),
                     "planning_deadline": as_date(row["planning_deadline"]),
                     "actuals_deadline": as_date(row["actuals_deadline"]),
                     "status": row["status"],
@@ -269,13 +269,13 @@ class Command(BaseCommand):
             )
             period.full_clean()
             period.save()
-            periods[period.name] = period
+            periods[(strategy.title, period.name)] = period
         return periods
 
     def _load_controlling_records(self, periods, levels):
         records = {}
         for row in read_csv("controlling_records.csv"):
-            period = periods[row["period_name"]]
+            period = periods[(row["strategy_title"], row["period_name"])]
             measure = levels[(row["strategy_title"], row["measure_short_code"])]
             record, _ = ControllingRecord.objects.update_or_create(
                 period=period,
@@ -302,7 +302,7 @@ class Command(BaseCommand):
 
     def _load_controlling_record_responsibilities(self, people, periods, levels, records):
         for row in read_csv("controlling_record_responsibilities.csv"):
-            period = periods[row["period_name"]]
+            period = periods[(row["strategy_title"], row["period_name"])]
             measure = levels[(row["strategy_title"], row["measure_short_code"])]
             record = records[(period.name, measure.strategy.title, measure.short_code)]
             person = people[row["person_short_code"]]

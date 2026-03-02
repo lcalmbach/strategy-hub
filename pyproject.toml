@@ -9,6 +9,7 @@ dependencies = [
     "iommi>=7.18",
     "psycopg[binary]>=3.2",
     "Pillow>=11.0",
+    "django-storages[s3]>=1.14.6",
     "gunicorn>=23.0",
     "whitenoise>=6.8",
 ]

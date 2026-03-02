@@ -5,8 +5,8 @@ from .models import ControllingPeriod, ControllingRecord, ControllingRecordRespo
 
 @admin.register(ControllingPeriod)
 class ControllingPeriodAdmin(admin.ModelAdmin):
-    list_display = ("name", "year", "month", "start_date", "end_date", "status", "is_locked")
-    list_filter = ("status", "year", "month")
+    list_display = ("strategy","name", "start_date", "end_date", "status")
+    list_filter = ("strategy", "status")
     search_fields = ("name",)
 
 

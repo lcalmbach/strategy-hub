@@ -22,9 +22,13 @@ class ControllingRecordStatus(models.TextChoices):
 
 
 class ControllingPeriod(TimestampedModel, UserStampedModel):
+    strategy = models.ForeignKey(
+        "strategies.Strategy",
+        verbose_name="Strategie",
+        on_delete=models.CASCADE,
+        related_name="controlling_periods",
+    )
     name = models.CharField("Name", max_length=255)
-    year = models.PositiveIntegerField("Jahr")
-    month = models.PositiveIntegerField("Monat", null=True, blank=True)
     start_date = models.DateField("Startdatum")
     end_date = models.DateField("Enddatum")
     planning_deadline = models.DateField("Planungsdeadline", null=True, blank=True)
@@ -38,19 +42,17 @@ class ControllingPeriod(TimestampedModel, UserStampedModel):
     is_locked = models.BooleanField("Gesperrt", default=False)
 
     class Meta:
-        ordering = ["-year", "-month", "-start_date"]
+        ordering = ["-start_date", "name"]
         verbose_name = "Controlling-Periode"
         verbose_name_plural = "Controlling-Perioden"
         constraints = [
-            models.UniqueConstraint(fields=["year", "month"], name="uniq_period_year_month"),
+            models.UniqueConstraint(fields=["strategy", "start_date", "end_date"], name="uniq_period_strategy_dates"),
         ]
 
     def clean(self) -> None:
         errors = {}
         if self.end_date < self.start_date:
             errors["end_date"] = "Periodenende darf nicht vor Periodenstart liegen."
-        if self.month is not None and not 1 <= self.month <= 12:
-            errors["month"] = "Monat muss zwischen 1 und 12 liegen."
         if self.planning_deadline and self.planning_deadline < self.start_date:
             errors["planning_deadline"] = "Planungsdeadline darf nicht vor Periodenstart liegen."
         if self.actuals_deadline and self.actuals_deadline < self.start_date:
@@ -120,6 +122,8 @@ class ControllingRecord(TimestampedModel, UserStampedModel):
         errors = {}
         if self.measure.level != StrategyLevelType.MASSNAHME:
             errors["measure"] = "Controlling-Records duerfen nur Massnahmen referenzieren."
+        if self.period_id and self.measure_id and self.period.strategy_id != self.measure.strategy_id:
+            errors["period"] = "Periode und Massnahme muessen zur gleichen Strategie gehoeren."
         if self.actual_fulfillment_percent < 0 or self.actual_fulfillment_percent > 100:
             errors["actual_fulfillment_percent"] = "Erfuellungsgrad muss zwischen 0 und 100 liegen."
         if errors:

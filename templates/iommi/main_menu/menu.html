@@ -1,6 +1,141 @@
+{% load static %}
+{% get_media_prefix as media_prefix %}
 {% block above %}{% endblock %}
 <style>
-    
+    body.sidebar_menu_active {
+        margin-left: var(--iommi-menu-width);
+    }
+
+    body.sidebar_menu_active.compact_menu {
+        margin-left: var(--iommi-iommi-menu-width);
+    }
+
+    .app-shell {
+        display: contents;
+    }
+
+    .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.9rem 1.25rem;
+        background: rgba(255, 252, 247, 0.92);
+        border-bottom: 1px solid rgba(18, 49, 58, 0.12);
+        backdrop-filter: blur(14px);
+    }
+
+    .topbar-brand {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+    }
+
+    .topbar-title {
+        font-size: 1rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #12313a;
+    }
+
+    .topbar-subtitle {
+        font-size: 0.86rem;
+        color: rgba(18, 49, 58, 0.72);
+    }
+
+    .topbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .user-menu {
+        position: relative;
+    }
+
+    .user-menu summary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.7rem;
+        padding: 0.45rem 0.7rem 0.45rem 0.45rem;
+        border: 1px solid rgba(18, 49, 58, 0.14);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+        list-style: none;
+        cursor: pointer;
+    }
+
+    .user-menu summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .user-menu summary::after {
+        content: "";
+        width: 0.55rem;
+        height: 0.55rem;
+        border-right: 2px solid rgba(18, 49, 58, 0.72);
+        border-bottom: 2px solid rgba(18, 49, 58, 0.72);
+        transform: rotate(45deg) translateY(-1px);
+    }
+
+    .user-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.35rem;
+        height: 2.35rem;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #0f5c4d, #1f4e79);
+        color: #fff;
+        font-size: 1rem;
+        font-weight: 800;
+        box-shadow: 0 10px 20px rgba(18, 49, 58, 0.18);
+    }
+
+    .user-label {
+        font-size: 0.92rem;
+        font-weight: 700;
+        color: #12313a;
+    }
+
+    .user-dropdown {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 0.5rem);
+        min-width: 11rem;
+        padding: 0.4rem;
+        border: 1px solid rgba(18, 49, 58, 0.12);
+        border-radius: 16px;
+        background: #fffdf8;
+        box-shadow: 0 16px 40px rgba(18, 49, 58, 0.16);
+    }
+
+    .user-dropdown form {
+        margin: 0;
+    }
+
+    .user-dropdown button {
+        display: block;
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 0;
+        border-radius: 12px;
+        background: transparent;
+        text-align: left;
+        font: inherit;
+        font-weight: 700;
+        color: #12313a;
+        cursor: pointer;
+    }
+
+    .user-dropdown button:hover {
+        background: rgba(15, 92, 77, 0.08);
+    }
+
     .main_menu {
         --iommi-menu-background-color: #b0e0e6;
         --iommi-menu-text-color-color: #17323b;
@@ -54,31 +189,17 @@
         background: rgba(255, 255, 255, 0.55);
     }
 
-    .main_menu .active-strategy-chip {
-        margin: 0 1rem 1rem;
-        padding: 0.75rem 0.9rem;
-        border: 1px solid rgba(18, 49, 58, 0.12);
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.42);
-        color: #17323b;
-    }
-
-    .main_menu .active-strategy-label {
+    .user-dropdown a {
         display: block;
-        margin-bottom: 0.2rem;
-        font-size: 0.72rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: rgba(23, 50, 59, 0.75);
-    }
-
-    .main_menu .active-strategy-name {
-        display: block;
-        font-size: 0.98rem;
+        padding: 0.75rem 0.85rem;
+        border-radius: 12px;
+        text-decoration: none;
         font-weight: 700;
-        line-height: 1.35;
-        word-break: break-word;
+        color: #12313a !important;
+    }
+
+    .user-dropdown a:hover {
+        background: rgba(15, 92, 77, 0.08);
     }
 
     .main_menu .app-version {
@@ -139,34 +260,71 @@
         justify-content: flex-end;
         margin: 0 0 1rem;
     }
+
+    @media (max-width: 900px) {
+        body.sidebar_menu_active,
+        body.sidebar_menu_active.compact_menu {
+            margin-left: 0;
+        }
+
+        .topbar {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+    }
 </style>
 
-<div{{ main_menu.attrs }}>
-
-    <nav>
-        {% block before_ul %}
-            <a id="menu-logo" href="/">
-                <img class="menu-logo-image" src="/media/strategies/logo.jpeg" alt="Strategy-Hub Logo">
-                <div class="menu-logo-text"> StatA-Strategy-Hub </div>
-            </a>
-            {% if active_strategy %}
-                <div class="active-strategy-chip">
-                    <span class="active-strategy-label">Aktive Strategie</span>
-                    <span class="active-strategy-name">{{ active_strategy.title }}</span>
-                </div>
+<div class="app-shell">
+    <header class="topbar">
+        <div class="topbar-brand">
+            <span class="topbar-title">StatA Strategy Hub</span>
+            <span class="topbar-subtitle">
+                {% if active_strategy %}
+                    Aktive Strategie: {{ active_strategy.title }}
+                {% else %}
+                    Strategieplattform
+                {% endif %}
+            </span>
+        </div>
+        <div class="topbar-actions">
+            {% if request.user.is_authenticated %}
+                <details class="user-menu">
+                    <summary>
+                        <span class="user-icon">{{ request.user.username|slice:":1"|upper }}</span>
+                        <span class="user-label">{{ request.user.username }}</span>
+                    </summary>
+                    <div class="user-dropdown">
+                        <a href="/accounts/profile/">Profile</a>
+                        <form method="post" action="/accounts/logout/">
+                            {% csrf_token %}
+                            <button type="submit">Logout</button>
+                        </form>
+                    </div>
+                </details>
             {% endif %}
-        {% endblock %}
-        <ul>
-            {% block before_items %}{% endblock %}
+        </div>
+    </header>
 
-            {{ main_menu.render_items }}
+    <div{{ main_menu.attrs }}>
+        <nav>
+            {% block before_ul %}
+                <a id="menu-logo" href="/">
+                    <img class="menu-logo-image" src="{{ media_prefix }}strategies/logo.jpeg" alt="Strategy-Hub Logo">
+                    <div class="menu-logo-text"> StatA-Strategy-Hub </div>
+                </a>
+            {% endblock %}
+            <ul>
+                {% block before_items %}{% endblock %}
 
-            {% block after_items %}{% endblock %}
-        </ul>
-        {% block after_ul %}{% endblock %}
-    </nav>
+                {{ main_menu.render_items }}
+
+                {% block after_items %}{% endblock %}
+            </ul>
+            {% block after_ul %}{% endblock %}
+        </nav>
 
 
-    {% block bottom %}{% endblock %}
-    <div class="app-version">Version {{ app_version }}</div>
+        {% block bottom %}{% endblock %}
+        <div class="app-version">Version {{ app_version }}</div>
+    </div>
 </div>

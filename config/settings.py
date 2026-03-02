@@ -167,17 +167,50 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-MEDIA_URL = "media/"
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "").strip()
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "").strip()
+AWS_S3_CUSTOM_DOMAIN = os.getenv("AWS_S3_CUSTOM_DOMAIN", "").strip()
+AWS_MEDIA_LOCATION = os.getenv("AWS_MEDIA_LOCATION", "").strip("/")
+AWS_QUERYSTRING_AUTH = env_bool("AWS_QUERYSTRING_AUTH", False)
+
 MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "media/"
+
+if AWS_STORAGE_BUCKET_NAME:
+    media_domain = AWS_S3_CUSTOM_DOMAIN or (
+        f"{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
+        if AWS_S3_REGION_NAME
+        else f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+    )
+    media_path = f"/{AWS_MEDIA_LOCATION}/" if AWS_MEDIA_LOCATION else "/"
+    MEDIA_URL = f"https://{media_domain}{media_path}"
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+}
+
+if AWS_STORAGE_BUCKET_NAME and find_spec("storages") is not None:
+    s3_options = {
+        "bucket_name": AWS_STORAGE_BUCKET_NAME,
+        "querystring_auth": AWS_QUERYSTRING_AUTH,
+    }
+    if AWS_S3_REGION_NAME:
+        s3_options["region_name"] = AWS_S3_REGION_NAME
+    if AWS_MEDIA_LOCATION:
+        s3_options["location"] = AWS_MEDIA_LOCATION
+    if AWS_S3_CUSTOM_DOMAIN:
+        s3_options["custom_domain"] = AWS_S3_CUSTOM_DOMAIN
+
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": s3_options,
+    }
 
 if find_spec("whitenoise") is not None:
-    STORAGES = {
-        "default": {
-            "BACKEND": "django.core.files.storage.FileSystemStorage",
-        },
-        "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-        },
+    STORAGES["staticfiles"] = {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

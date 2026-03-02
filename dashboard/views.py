@@ -1,5 +1,8 @@
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
+from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
+from django.views.decorators.http import require_POST
 
 from iommi import Column, Page, Table, html
 
@@ -97,3 +100,29 @@ def dashboard_home(request):
 def select_strategy(request, strategy_id):
     select_active_strategy(request, strategy_id)
     return redirect("home")
+
+
+@login_required
+def profile_page(request):
+    active_strategy = get_active_strategy(request)
+
+    page = Page(
+        title="Profil",
+        parts__intro=html.div(
+            html.p(f"Benutzername: {request.user.username}"),
+            html.p(f"E-Mail: {request.user.email or '-'}"),
+            html.p(
+                f"Aktive Strategie: {active_strategy.title}"
+                if active_strategy
+                else "Aktive Strategie: keine ausgewaehlt"
+            ),
+        ),
+    )
+    return page.as_view()(request)
+
+
+@login_required
+@require_POST
+def logout_view(request):
+    logout(request)
+    return HttpResponseRedirect("/accounts/login/")

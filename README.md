@@ -139,6 +139,13 @@ Optional config vars:
 
 - `DJANGO_CSRF_TRUSTED_ORIGINS=https://<your-app>.herokuapp.com`
 - `DJANGO_SECURE_SSL_REDIRECT=true`
+- `AWS_STORAGE_BUCKET_NAME=<your-media-bucket>`
+- `AWS_S3_REGION_NAME=us-east-2`
+- `AWS_S3_CUSTOM_DOMAIN=<optional custom CDN/domain>`
+- `AWS_MEDIA_LOCATION=<optional prefix inside the bucket>`
+- `AWS_QUERYSTRING_AUTH=false`
+- `AWS_ACCESS_KEY_ID=<required only if Django/Heroku must upload to S3>`
+- `AWS_SECRET_ACCESS_KEY=<required only if Django/Heroku must upload to S3>`
 
 Typical first deployment flow:
 
@@ -154,9 +161,11 @@ git push heroku main
 
 The `release` process in [Procfile](/home/lcalm/Work/Dev/strategyhub/Procfile) runs `python manage.py migrate` automatically on deploy.
 
-Current limitation:
+Media on Heroku:
 
-- uploaded media is still stored on the local filesystem. That is not durable on Heroku. For real user uploads, move media storage to S3-compatible object storage before relying on it.
+- If `AWS_STORAGE_BUCKET_NAME` is set, Django serves media URLs from S3 instead of local `/media/`.
+- If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are also set, Django uploads new media files to S3 as well.
+- If the bucket is public and you only need to display files that are already in S3, no AWS access key is needed; `MEDIA_URL` will point directly at the bucket.
 
 ## Key Files
 
