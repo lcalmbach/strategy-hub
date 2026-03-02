@@ -190,6 +190,9 @@ AWS_S3_CUSTOM_DOMAIN = os.getenv("AWS_S3_CUSTOM_DOMAIN", "").strip()
 AWS_MEDIA_BASE_URL = os.getenv("AWS_MEDIA_BASE_URL", "").strip().rstrip("/")
 AWS_MEDIA_LOCATION = os.getenv("AWS_MEDIA_LOCATION", "").strip("/")
 AWS_QUERYSTRING_AUTH = env_bool("AWS_QUERYSTRING_AUTH", False)
+AWS_S3_USE_STORAGE = env_bool("AWS_S3_USE_STORAGE", False)
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "").strip()
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "").strip()
 
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "media/"
@@ -212,7 +215,11 @@ STORAGES = {
     },
 }
 
-if AWS_STORAGE_BUCKET_NAME and find_spec("storages") is not None:
+if (
+    AWS_STORAGE_BUCKET_NAME
+    and find_spec("storages") is not None
+    and (AWS_S3_USE_STORAGE or (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY))
+):
     s3_options = {
         "bucket_name": AWS_STORAGE_BUCKET_NAME,
         "querystring_auth": AWS_QUERYSTRING_AUTH,
