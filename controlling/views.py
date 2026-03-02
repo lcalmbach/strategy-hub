@@ -1,6 +1,6 @@
 from iommi import Column
 
-from core.iommi import login_required_crud_paths
+from core.iommi import icon_delete_column, icon_edit_column, login_required_crud_paths
 from core.strategy_context import get_active_strategy
 from strategies.models import StrategyLevel, StrategyLevelType
 from .models import ControllingPeriod, ControllingRecord, ControllingRecordResponsibility
@@ -163,8 +163,8 @@ record_responsibility_crud = login_required_crud_paths(
     table__columns__person__filter__include=True,
     table__columns__role__filter__include=True,
     table__columns__controlling_record__cell__url=lambda row, **_: f"/controlling/responsibilities/{row.pk}/",
-    table__columns__edit=Column.edit(after=0, cell__url=lambda row, **_: f"/controlling/responsibilities/{row.pk}/edit/"),
-    table__columns__delete=Column.delete(cell__url=lambda row, **_: f"/controlling/responsibilities/{row.pk}/delete/"),
+    table__columns__edit=icon_edit_column(after=0, cell__url=lambda row, **_: f"/controlling/responsibilities/{row.pk}/edit/"),
+    table__columns__delete=icon_delete_column(cell__url=lambda row, **_: f"/controlling/responsibilities/{row.pk}/delete/"),
     create__title="Record-Verantwortlichkeit erfassen",
     create__auto__exclude=AUDIT_FIELDS,
     create__fields__controlling_record__choices=lambda request, **_: ControllingRecord.objects.filter(

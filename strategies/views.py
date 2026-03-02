@@ -4,7 +4,7 @@ from django.utils.http import urlencode
 
 from iommi import Action, Column, LAST, Page, Table, html
 
-from core.iommi import login_required_crud_paths
+from core.iommi import icon_edit_column, login_required_crud_paths
 from core.strategy_context import get_active_strategy
 from .models import MeasureResponsibility, MeasureType, Strategy, StrategyLevel, StrategyLevelType
 
@@ -458,9 +458,8 @@ handlungsfelder_table = Table(
     columns__title__filter__include=True,
     columns__short_code__filter__include=True,
     columns__title__cell__url=lambda row, **_: f"/strategies/levels/{row.pk}/",
-    columns__edit=Column.edit(
+    columns__edit=icon_edit_column(
         after=0,
-        display_name="",
         cell__url=lambda row, **_: f"/strategies/levels/{row.pk}/edit/",
     ),
 )
@@ -486,9 +485,8 @@ ziele_table = Table(
     columns__parent__filter__include=False,
     columns__parent__display_name="Handlungsfeld",
     columns__title__cell__url=lambda row, **_: f"/strategies/levels/{row.pk}/",
-    columns__edit=Column.edit(
+    columns__edit=icon_edit_column(
         after=0,
-        display_name="",
         cell__url=lambda row, **_: f"/strategies/levels/{row.pk}/edit/",
     ),
 )
@@ -527,9 +525,8 @@ massnahmen_table = Table(
     columns__parent__after="handlungsfeld",
     columns__parent__cell__value=lambda row, **_: row.parent.title if row.parent else "",
     columns__title__cell__url=lambda row, **_: f"/strategies/levels/{row.pk}/",
-    columns__edit=Column.edit(
+    columns__edit=icon_edit_column(
         after=0,
-        display_name="",
         cell__url=lambda row, **_: f"/strategies/levels/{row.pk}/edit/",
     ),
 )

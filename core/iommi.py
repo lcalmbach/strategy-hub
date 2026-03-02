@@ -8,6 +8,26 @@ from iommi.declarative.namespace import EMPTY, setdefaults_path
 from core.strategy_context import require_active_strategy
 
 
+def icon_edit_column(**kwargs):
+    return Column.edit(
+        display_name="",
+        extra__icon_attrs__title="Bearbeiten",
+        extra__icon_attrs__aria_label="Bearbeiten",
+        header__attrs__title="Bearbeiten",
+        **kwargs,
+    )
+
+
+def icon_delete_column(**kwargs):
+    return Column.delete(
+        display_name="",
+        extra__icon_attrs__title="Loeschen",
+        extra__icon_attrs__aria_label="Loeschen",
+        header__attrs__title="Loeschen",
+        **kwargs,
+    )
+
+
 @dispatch(
     table=EMPTY,
     create=EMPTY,
@@ -35,11 +55,11 @@ def login_required_crud_paths(
             attrs__href="create/",
             attrs__class__primary_action=True,
         ),
-        columns__edit=Column.edit(
+        columns__edit=icon_edit_column(
             after=0,
             cell__url=lambda row, **_: f"{row.pk}/edit/",
         ),
-        columns__delete=Column.delete(
+        columns__delete=icon_delete_column(
             cell__url=lambda row, **_: f"{row.pk}/delete/",
         ),
     )
