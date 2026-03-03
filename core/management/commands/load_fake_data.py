@@ -194,6 +194,9 @@ class Command(BaseCommand):
                     "parent": None,
                     "sort_order": as_int(row["sort_order"]) or 0,
                     "measure_type": None,
+                    "start_date": as_date(row.get("start_date", "")),
+                    "end_date": as_date(row.get("end_date", "")),
+                    "status": row.get("status", "") or None,
                 },
             )
             level.full_clean()
@@ -222,6 +225,9 @@ class Command(BaseCommand):
                         "parent": parent,
                         "sort_order": as_int(row["sort_order"]) or 0,
                         "measure_type": measure_type,
+                        "start_date": as_date(row.get("start_date", "")),
+                        "end_date": as_date(row.get("end_date", "")),
+                        "status": row.get("status", "") or None,
                     },
                 )
                 level.full_clean()
@@ -262,9 +268,8 @@ class Command(BaseCommand):
                 defaults={
                     "name": row["name"],
                     "planning_deadline": as_date(row["planning_deadline"]),
-                    "actuals_deadline": as_date(row["actuals_deadline"]),
+                    "controlling_deadline": as_date(row["controlling_deadline"]),
                     "status": row["status"],
-                    "is_locked": as_bool(row["is_locked"]),
                 },
             )
             period.full_clean()

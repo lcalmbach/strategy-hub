@@ -18,8 +18,8 @@ class MeasureTypeAdmin(admin.ModelAdmin):
 
 @admin.register(StrategyLevel)
 class StrategyLevelAdmin(admin.ModelAdmin):
-    list_display = ("title", "strategy", "level", "parent", "short_code")
-    list_filter = ("level", "strategy")
+    list_display = ("title", "strategy", "level", "parent", "short_code", "status", "start_date", "end_date")
+    list_filter = ("level", "strategy", "status")
     search_fields = ("title", "short_code")
 
 

@@ -1,7 +1,10 @@
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect
 from iommi import Column
 
 from core.iommi import icon_delete_column, icon_edit_column, login_required_crud_paths
-from core.strategy_context import get_active_strategy
+from core.strategy_context import get_active_strategy, require_active_strategy
 from strategies.models import StrategyLevel, StrategyLevelType
 from .models import ControllingPeriod, ControllingRecord, ControllingRecordResponsibility
 
@@ -22,6 +25,34 @@ def create_controlling_period_instance(request, **_):
     return ControllingPeriod(strategy=active_strategy(request))
 
 
+@login_required
+@require_active_strategy
+def delete_controlling_period_direct(request, pk):
+    period = get_object_or_404(
+        ControllingPeriod,
+        pk=pk,
+        strategy_id=active_strategy_id(request),
+    )
+    period_name = period.name
+    period.delete()
+    messages.success(request, f"Periode geloescht: {period_name}")
+    return redirect("/controlling/periods/")
+
+
+@login_required
+@require_active_strategy
+def delete_controlling_record_direct(request, pk):
+    record = get_object_or_404(
+        ControllingRecord,
+        pk=pk,
+        measure__strategy_id=active_strategy_id(request),
+    )
+    record_label = str(record)
+    record.delete()
+    messages.success(request, f"Record geloescht: {record_label}")
+    return redirect("/controlling/records/")
+
+
 period_crud = login_required_crud_paths(
     model=ControllingPeriod,
     require_strategy=True,
@@ -35,18 +66,18 @@ period_crud = login_required_crud_paths(
     ).select_related("strategy"),
     table__columns__name__filter__include=True,
     table__columns__status__filter__include=True,
-    table__columns__is_locked__filter__include=True,
     table__columns__id__include=False,
     table__columns__strategy__include=False,
     table__columns__planning_deadline__include=False,
-    table__columns__actuals_deadline__include=False,
+    table__columns__controlling_deadline__include=False,
     table__columns__status__include=False,
-    table__columns__is_locked__include=False,
     table__columns__created_at__include=False,
     table__columns__updated_at__include=False,
     table__columns__created_by__include=False,
     table__columns__updated_by__include=False,
     table__columns__name__cell__url=lambda row, **_: f"/controlling/periods/{row.pk}/",
+    table__columns__edit=icon_edit_column(after=0, cell__url=lambda row, **_: f"/controlling/periods/{row.pk}/edit/"),
+    table__columns__delete=icon_delete_column(cell__url=lambda row, **_: f"/controlling/periods/{row.pk}/delete-direct/"),
     create__title="Controlling-Periode erfassen",
     create__auto__exclude=AUDIT_FIELDS,
     create__extra__new_instance=create_controlling_period_instance,
@@ -83,18 +114,13 @@ record_crud = login_required_crud_paths(
     ).select_related("period", "measure", "measure__parent", "measure__strategy"),
     table__columns__id__include=False,
     table__columns__measure__display_name="Massnahme",
-    table__columns__measure__after="goal",
     table__columns__measure__include=True,
+    table__columns__measure__cell__value=lambda row, **_: (
+        row.measure.display_label[:50] + "..." if len(row.measure.display_label) > 50 else row.measure.display_label
+    ),
     table__columns__period__display_name="Planungsperiode",
     table__columns__period__include=True,
     table__columns__status__include=True,
-    table__columns__goal=Column(
-        display_name="Ziel",
-        after="edit",
-        cell__value=lambda row, **_: row.measure.parent.title if row.measure.parent else "",
-        cell__url=lambda row, **_: f"/strategies/levels/{row.measure.parent.pk}/" if row.measure.parent else None,
-        sortable=False,
-    ),
     table__columns__period__filter__include=True,
     table__columns__measure__filter__include=True,
     table__columns__status__filter__include=True,
@@ -116,6 +142,8 @@ record_crud = login_required_crud_paths(
     table__columns__created_by__include=False,
     table__columns__updated_by__include=False,
     table__columns__measure__cell__url=lambda row, **_: f"/controlling/records/{row.pk}/",
+    table__columns__edit=icon_edit_column(after=0, cell__url=lambda row, **_: f"/controlling/records/{row.pk}/edit/"),
+    table__columns__delete=icon_delete_column(cell__url=lambda row, **_: f"/controlling/records/{row.pk}/delete-direct/"),
     create__title="Controlling-Record erfassen",
     create__auto__exclude=AUDIT_FIELDS,
     create__fields__measure__choices=lambda request, **_: StrategyLevel.objects.filter(

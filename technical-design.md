@@ -200,9 +200,8 @@ Felder:
 - `start_date`: DateField
 - `end_date`: DateField
 - `planning_deadline`: DateField, optional
-- `actuals_deadline`: DateField, optional
+- `controlling_deadline`: DateField, optional
 - `status`: CharField mit Choices
-- `is_locked`: BooleanField
 
 Choices `status`:
 - `draft`

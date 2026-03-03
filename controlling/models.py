@@ -32,14 +32,13 @@ class ControllingPeriod(TimestampedModel, UserStampedModel):
     start_date = models.DateField("Startdatum")
     end_date = models.DateField("Enddatum")
     planning_deadline = models.DateField("Planungsdeadline", null=True, blank=True)
-    actuals_deadline = models.DateField("Ist-Deadline", null=True, blank=True)
+    controlling_deadline = models.DateField("Controlling-Deadline", null=True, blank=True)
     status = models.CharField(
         "Status",
         max_length=30,
         choices=ControllingPeriodStatus.choices,
         default=ControllingPeriodStatus.DRAFT,
     )
-    is_locked = models.BooleanField("Gesperrt", default=False)
 
     class Meta:
         ordering = ["-start_date", "name"]
@@ -55,8 +54,8 @@ class ControllingPeriod(TimestampedModel, UserStampedModel):
             errors["end_date"] = "Periodenende darf nicht vor Periodenstart liegen."
         if self.planning_deadline and self.planning_deadline < self.start_date:
             errors["planning_deadline"] = "Planungsdeadline darf nicht vor Periodenstart liegen."
-        if self.actuals_deadline and self.actuals_deadline < self.start_date:
-            errors["actuals_deadline"] = "Ist-Deadline darf nicht vor Periodenstart liegen."
+        if self.controlling_deadline and self.controlling_deadline < self.start_date:
+            errors["controlling_deadline"] = "Controlling-Deadline darf nicht vor Periodenstart liegen."
         if errors:
             raise ValidationError(errors)
 

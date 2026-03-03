@@ -7,7 +7,7 @@
                     <option value="">Alle</option>
                     {% for handlungsfeld in fragment.extra.handlungsfelder %}
                         <option value="{{ handlungsfeld.pk }}" {% if fragment.extra.selected_handlungsfeld_id == handlungsfeld.pk|stringformat:'s' %}selected{% endif %}>
-                            {{ handlungsfeld.title }}
+                            {{ handlungsfeld.display_label }}
                         </option>
                     {% endfor %}
                 </select>
@@ -18,7 +18,7 @@
                     <option value="">Bitte waehlen</option>
                     {% for ziel in fragment.extra.ziele %}
                         <option value="{{ ziel.pk }}" {% if fragment.extra.selected_ziel_id == ziel.pk|stringformat:'s' %}selected{% endif %}>
-                            {{ ziel.title }}
+                            {{ ziel.display_label }}
                         </option>
                     {% endfor %}
                 </select>

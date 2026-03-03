@@ -7,7 +7,7 @@
                     <option value="">Bitte waehlen</option>
                     {% for handlungsfeld in fragment.extra.handlungsfelder %}
                         <option value="{{ handlungsfeld.pk }}" {% if fragment.extra.selected_handlungsfeld_id == handlungsfeld.pk|stringformat:'s' %}selected{% endif %}>
-                            {{ handlungsfeld.title }}
+                            {{ handlungsfeld.display_label }}
                         </option>
                     {% endfor %}
                 </select>

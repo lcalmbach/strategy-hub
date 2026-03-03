@@ -24,6 +24,13 @@ class ResponsibilityRole(models.TextChoices):
     APPROVER = "approver", "Freigebend"
 
 
+class MeasureStatus(models.TextChoices):
+    PLANNED = "planned", "Geplant"
+    IN_PROGRESS = "in_progress", "In Arbeit"
+    COMPLETED = "completed", "Abgeschlossen"
+    POSTPONED = "postponed", "Verschoben"
+
+
 class Strategy(TimestampedModel, UserStampedModel):
     title = models.CharField("Titel", max_length=255)
     short_description = models.TextField("Kurzbeschreibung")
@@ -85,6 +92,15 @@ class StrategyLevel(TimestampedModel, UserStampedModel, OrderedModel):
         on_delete=models.SET_NULL,
         related_name="strategy_levels",
     )
+    start_date = models.DateField("Startdatum", null=True, blank=True)
+    end_date = models.DateField("Enddatum", null=True, blank=True)
+    status = models.CharField(
+        "Status",
+        max_length=20,
+        choices=MeasureStatus.choices,
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         ordering = ["strategy", "sort_order", "title"]
@@ -93,6 +109,18 @@ class StrategyLevel(TimestampedModel, UserStampedModel, OrderedModel):
         constraints = [
             models.UniqueConstraint(fields=["strategy", "short_code"], name="uniq_strategy_level_code"),
         ]
+
+    @property
+    def display_label(self) -> str:
+        return f"{self.short_code} {self.title}".strip()
+
+    @property
+    def start_year_display(self) -> str:
+        return str(self.start_date.year) if self.start_date else ""
+
+    @property
+    def end_year_display(self) -> str:
+        return str(self.end_date.year) if self.end_date else ""
 
     def clean(self) -> None:
         errors = {}
@@ -104,6 +132,12 @@ class StrategyLevel(TimestampedModel, UserStampedModel, OrderedModel):
                 errors["parent"] = "Handlungsfelder duerfen keinen Parent haben."
             if self.measure_type_id:
                 errors["measure_type"] = "Massnahme-Typ ist nur fuer Massnahmen erlaubt."
+            if self.start_date:
+                errors["start_date"] = "Startdatum ist nur fuer Massnahmen erlaubt."
+            if self.end_date:
+                errors["end_date"] = "Enddatum ist nur fuer Massnahmen erlaubt."
+            if self.status:
+                errors["status"] = "Status ist nur fuer Massnahmen erlaubt."
 
         if self.level == StrategyLevelType.ZIEL:
             if not self.parent_id:
@@ -112,12 +146,20 @@ class StrategyLevel(TimestampedModel, UserStampedModel, OrderedModel):
                 errors["parent"] = "Ziele duerfen nur unter Handlungsfeldern liegen."
             if self.measure_type_id:
                 errors["measure_type"] = "Massnahme-Typ ist nur fuer Massnahmen erlaubt."
+            if self.start_date:
+                errors["start_date"] = "Startdatum ist nur fuer Massnahmen erlaubt."
+            if self.end_date:
+                errors["end_date"] = "Enddatum ist nur fuer Massnahmen erlaubt."
+            if self.status:
+                errors["status"] = "Status ist nur fuer Massnahmen erlaubt."
 
         if self.level == StrategyLevelType.MASSNAHME:
             if not self.parent_id:
                 errors["parent"] = "Massnahmen brauchen ein Ziel als Parent."
             elif self.parent.level != StrategyLevelType.ZIEL:
                 errors["parent"] = "Massnahmen duerfen nur unter Zielen liegen."
+            if self.start_date and self.end_date and self.end_date < self.start_date:
+                errors["end_date"] = "Enddatum darf nicht vor Startdatum liegen."
 
         if self.level != StrategyLevelType.MASSNAHME and self.measure_type_id:
             errors["measure_type"] = "Massnahme-Typ ist nur fuer Massnahmen erlaubt."
@@ -126,7 +168,7 @@ class StrategyLevel(TimestampedModel, UserStampedModel, OrderedModel):
             raise ValidationError(errors)
 
     def __str__(self) -> str:
-        return f"{self.title} ({self.get_level_display()})"
+        return self.display_label
 
 
 class MeasureResponsibility(TimestampedModel, UserStampedModel):

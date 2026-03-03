@@ -60,13 +60,13 @@ def parent_level_choices_queryset(request, params=None, **_):
         return StrategyLevel.objects.filter(
             strategy_id=strategy_id,
             level=StrategyLevelType.HANDLUNGSFELD,
-        )
+        ).order_by("short_code", "title")
 
     if current_level == StrategyLevelType.MASSNAHME:
         return StrategyLevel.objects.filter(
             strategy_id=strategy_id,
             level=StrategyLevelType.ZIEL,
-        )
+        ).order_by("short_code", "title")
 
     return StrategyLevel.objects.none()
 
@@ -79,6 +79,10 @@ def level_has_parent(request, params=None, **_):
 
 
 def level_has_measure_type(request, params=None, **_):
+    return current_strategy_level(request, params=params) == StrategyLevelType.MASSNAHME
+
+
+def level_has_measure_schedule(request, params=None, **_):
     return current_strategy_level(request, params=params) == StrategyLevelType.MASSNAHME
 
 
@@ -161,7 +165,7 @@ def handlungsfeld_choices(request, **_):
     return StrategyLevel.objects.filter(
         strategy_id=active_strategy_id(request),
         level=StrategyLevelType.HANDLUNGSFELD,
-    ).order_by("title")
+    ).order_by("short_code", "title")
 
 
 def ziel_choices(request, **_):
@@ -176,7 +180,7 @@ def ziel_choices(request, **_):
     )
     if selected_handlungsfeld_id:
         queryset = queryset.filter(parent_id=selected_handlungsfeld_id)
-    return queryset.order_by("title")
+    return queryset.order_by("short_code", "title")
 
 
 def massnahmen_create_href(request, **_):
@@ -244,7 +248,7 @@ def ziele_rows(request, **_):
     queryset = StrategyLevel.objects.filter(
         level=StrategyLevelType.ZIEL,
         strategy_id=active_strategy_id(request),
-    ).select_related("strategy", "parent")
+    ).select_related("strategy", "parent").order_by("short_code", "title")
     selected_handlungsfeld_id = selected_ziele_handlungsfeld_id(request)
     if selected_handlungsfeld_id:
         queryset = queryset.filter(parent_id=selected_handlungsfeld_id)
@@ -331,6 +335,9 @@ level_crud = login_required_crud_paths(
     create__fields__parent__choices=parent_level_choices_queryset,
     create__fields__parent__include=create_parent_field_include,
     create__fields__measure_type__include=level_has_measure_type,
+    create__fields__start_date__include=level_has_measure_schedule,
+    create__fields__end_date__include=level_has_measure_schedule,
+    create__fields__status__include=level_has_measure_schedule,
     edit__title=lambda form, **_: f"{strategy_level_label(form=form)} bearbeiten",
     edit__auto__exclude=AUDIT_FIELDS,
     edit__extra__redirect_to=strategy_level_redirect_to,
@@ -344,6 +351,9 @@ level_crud = login_required_crud_paths(
     edit__fields__parent__choices=parent_level_choices_queryset,
     edit__fields__parent__include=level_has_parent,
     edit__fields__measure_type__include=level_has_measure_type,
+    edit__fields__start_date__include=level_has_measure_schedule,
+    edit__fields__end_date__include=level_has_measure_schedule,
+    edit__fields__status__include=level_has_measure_schedule,
     detail__title=lambda form, **_: form.instance.title,
     detail__auto__exclude=AUDIT_FIELDS,
     detail__instance=lambda params, request, **_: StrategyLevel.objects.get(
@@ -355,6 +365,9 @@ level_crud = login_required_crud_paths(
     detail__fields__parent__choices=parent_level_choices_queryset,
     detail__fields__parent__include=level_has_parent,
     detail__fields__measure_type__include=level_has_measure_type,
+    detail__fields__start_date__include=level_has_measure_schedule,
+    detail__fields__end_date__include=level_has_measure_schedule,
+    detail__fields__status__include=level_has_measure_schedule,
     delete__title=lambda form, **_: f"Strategieebene loeschen: {form.instance.title}",
     delete__instance=lambda params, request, **_: StrategyLevel.objects.get(
         pk=params.pk,
@@ -402,7 +415,7 @@ responsibility_crud = login_required_crud_paths(
     create__fields__measure__choices=lambda request, **_: StrategyLevel.objects.filter(
         strategy_id=active_strategy_id(request),
         level=StrategyLevelType.MASSNAHME,
-    ),
+    ).order_by("short_code", "title"),
     edit__title="Verantwortlichkeit bearbeiten",
     edit__auto__exclude=AUDIT_FIELDS,
     edit__instance=lambda params, request, **_: MeasureResponsibility.objects.get(
@@ -412,7 +425,7 @@ responsibility_crud = login_required_crud_paths(
     edit__fields__measure__choices=lambda request, **_: StrategyLevel.objects.filter(
         strategy_id=active_strategy_id(request),
         level=StrategyLevelType.MASSNAHME,
-    ),
+    ).order_by("short_code", "title"),
     detail__title=lambda form, **_: str(form.instance),
     detail__auto__exclude=AUDIT_FIELDS,
     detail__instance=lambda params, request, **_: MeasureResponsibility.objects.get(
@@ -422,7 +435,7 @@ responsibility_crud = login_required_crud_paths(
     detail__fields__measure__choices=lambda request, **_: StrategyLevel.objects.filter(
         strategy_id=active_strategy_id(request),
         level=StrategyLevelType.MASSNAHME,
-    ),
+    ).order_by("short_code", "title"),
     delete__title=lambda form, **_: f"Verantwortlichkeit loeschen: {form.instance}",
     delete__instance=lambda params, request, **_: MeasureResponsibility.objects.get(
         pk=params.pk,
@@ -450,6 +463,9 @@ handlungsfelder_table = Table(
     columns__description__include=False,
     columns__parent__include=False,
     columns__measure_type__include=False,
+    columns__start_date__include=False,
+    columns__end_date__include=False,
+    columns__status__include=False,
     columns__sort_order__include=False,
     columns__created_at__include=False,
     columns__updated_at__include=False,
@@ -475,6 +491,9 @@ ziele_table = Table(
     columns__level__include=False,
     columns__description__include=False,
     columns__measure_type__include=False,
+    columns__start_date__include=False,
+    columns__end_date__include=False,
+    columns__status__include=False,
     columns__sort_order__include=False,
     columns__created_at__include=False,
     columns__updated_at__include=False,
@@ -509,21 +528,14 @@ massnahmen_table = Table(
     columns__updated_by__include=False,
     columns__title__filter__include=True,
     columns__short_code__filter__include=True,
-    columns__handlungsfeld=Column.choice_queryset(
-        after="short_code",
-        model=StrategyLevel,
-        choices=handlungsfeld_choices,
-        display_name="Handlungsfeld",
-        attr="parent__parent",
-        filter__include=True,
-        cell__value=lambda row, **_: row.parent.parent.title if row.parent and row.parent.parent else "",
-        sortable=False,
-    ),
-    columns__handlungsfeld__filter__include=False,
     columns__parent__filter__include=False,
     columns__parent__display_name="Ziel",
-    columns__parent__after="handlungsfeld",
+    columns__parent__after="short_code",
     columns__parent__cell__value=lambda row, **_: row.parent.title if row.parent else "",
+    columns__start_date__display_name="Jahr von",
+    columns__start_date__cell__value=lambda row, **_: row.start_year_display,
+    columns__end_date__display_name="Jahr bis",
+    columns__end_date__cell__value=lambda row, **_: row.end_year_display,
     columns__title__cell__url=lambda row, **_: f"/strategies/levels/{row.pk}/",
     columns__edit=icon_edit_column(
         after=0,

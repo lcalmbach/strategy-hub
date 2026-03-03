@@ -1,6 +1,6 @@
 [project]
 name = "strategy-hub"
-version = "0.1.3"
+version = "0.1.4"
 description = "Strategy Hub for strategy management and controlling"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -25,7 +25,7 @@ dev = [
 package = false
 
 [tool.strategy_hub]
-version_date = "2026-03-02"
+version_date = "2026-03-03"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
