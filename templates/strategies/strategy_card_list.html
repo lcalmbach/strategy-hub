@@ -43,7 +43,7 @@
 
                     <a class="image-wrap" href="/select-strategy/{{ strategy.id }}/">
                         {% if strategy.image %}
-                            <img src="{{ strategy.image.url }}" alt="{{ strategy.title }}">
+                            <img src="{{ strategy.image_url }}" alt="{{ strategy.title }}">
                         {% else %}
                             <div class="image-placeholder">
                                 <span>{{ strategy.title|slice:":1" }}</span>

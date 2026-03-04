@@ -393,10 +393,13 @@ strategy_crud = login_required_crud_paths(
     table__columns__title__cell__url=lambda row, **_: f"/strategies/{row.pk}/",
     create__title="Strategie erfassen",
     create__auto__exclude=AUDIT_FIELDS,
+    create__fields__image__extra__file_item_template=None,
     edit__title="Strategie bearbeiten",
     edit__auto__exclude=AUDIT_FIELDS,
+    edit__fields__image__extra__file_item_template=None,
     detail__title=lambda form, **_: form.instance.title,
     detail__auto__exclude=AUDIT_FIELDS,
+    detail__fields__image__extra__file_item_template=None,
     delete__title=lambda form, **_: f"Strategie löschen: {form.instance.title}",
 )
 

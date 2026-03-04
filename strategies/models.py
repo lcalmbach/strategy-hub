@@ -1,5 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.conf import settings
+from urllib.parse import urljoin, urlparse
 
 from core.models import OrderedModel, TimestampedModel, UserStampedModel
 
@@ -49,6 +51,21 @@ class Strategy(TimestampedModel, UserStampedModel):
         ordering = ["sort_order", "title"]
         verbose_name = "Strategie"
         verbose_name_plural = "Strategien"
+
+    @property
+    def image_url(self) -> str:
+        if not self.image:
+            return ""
+
+        image_name = str(self.image.name or "").strip()
+        if not image_name:
+            return ""
+
+        parsed = urlparse(image_name)
+        if parsed.scheme and parsed.netloc:
+            return image_name
+
+        return urljoin(settings.MEDIA_URL, image_name)
 
     def clean(self) -> None:
         if self.valid_until and self.valid_until < self.valid_from:

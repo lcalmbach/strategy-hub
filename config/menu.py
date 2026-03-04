@@ -61,12 +61,6 @@ main_menu = MainMenu(
             display_name="Personen",
             render=lambda user, **_: user.is_authenticated,
         ),
-        funktionen=M(
-            view=lambda request: None,
-            url="/people/functions/",
-            display_name="Funktionen",
-            render=lambda user, **_: user.is_authenticated,
-        ),
         admin=M(
             view=lambda request: None,
             url="/admin/",
