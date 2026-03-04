@@ -29,7 +29,7 @@ def require_active_strategy(view_func):
     @wraps(view_func)
     def wrapped(request, *args, **kwargs):
         if get_active_strategy(request) is None:
-            messages.warning(request, "Bitte waehle zuerst auf der Startseite eine Strategie aus.")
+            messages.warning(request, "Bitte wähle zuerst auf der Startseite eine Strategie aus.")
             return redirect("home")
         return view_func(request, *args, **kwargs)
 

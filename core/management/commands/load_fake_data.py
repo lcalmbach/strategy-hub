@@ -1,4 +1,5 @@
 import csv
+import random
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -12,8 +13,15 @@ from controlling.models import (
     ControllingRecord,
     ControllingRecordResponsibility,
 )
-from people.models import Person
-from strategies.models import MeasureResponsibility, MeasureType, Strategy, StrategyLevel
+from people.models import Function, Person
+from strategies.models import (
+    MeasureResponsibility,
+    MeasureType,
+    ResponsibilityRole,
+    Strategy,
+    StrategyLevel,
+    StrategyLevelType,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parents[3]
@@ -56,17 +64,33 @@ class Command(BaseCommand):
             action="store_true",
             help="Delete existing fake-data domain rows before importing CSV content.",
         )
+        parser.add_argument(
+            "--person",
+            action="store_true",
+            help="Load only users and people from the fake dataset.",
+        )
 
     @transaction.atomic
     def handle(self, *args, **options):
+        person_only = options["person"]
+
         if options["replace"]:
-            self._replace_existing_data()
+            if person_only:
+                self._replace_people_data()
+            else:
+                self._replace_existing_data()
 
         self.stdout.write("Loading fake users...")
-        users = self._load_users()
+        self._load_users()
 
+        self.stdout.write("Loading fake functions...")
+        self._load_functions()
         self.stdout.write("Loading fake people...")
         people = self._load_people()
+
+        if person_only:
+            self.stdout.write(self.style.SUCCESS("Fake people import completed."))
+            return
 
         self.stdout.write("Loading fake measure types...")
         measure_types = self._load_measure_types()
@@ -79,6 +103,7 @@ class Command(BaseCommand):
 
         self.stdout.write("Loading fake measure responsibilities...")
         self._load_measure_responsibilities(people, levels)
+        self._ensure_each_measure_has_responsible_people(people, levels)
 
         self.stdout.write("Loading fake controlling periods...")
         periods = self._load_controlling_periods()
@@ -101,9 +126,32 @@ class Command(BaseCommand):
         MeasureType.objects.all().delete()
         Strategy.objects.all().delete()
         Person.objects.all().delete()
+        Function.objects.all().delete()
 
         usernames = [row["username"] for row in read_csv("users.csv")]
         get_user_model().objects.filter(username__in=usernames).delete()
+
+    def _replace_people_data(self):
+        self.stdout.write("Deleting existing imported people data...")
+        Person.objects.all().delete()
+        Function.objects.all().delete()
+
+        usernames = [row["username"] for row in read_csv("users.csv")]
+        get_user_model().objects.filter(username__in=usernames).delete()
+
+    def _load_functions(self):
+        function_map = {}
+        for row in read_csv("functions.csv"):
+            function, _ = Function.objects.update_or_create(
+                code=row["code"],
+                defaults={
+                    "label": row["label"],
+                    "sort_order": as_int(row.get("sort_order", "")) or 0,
+                    "is_active": as_bool(row["is_active"]),
+                },
+            )
+            function_map[function.code] = function
+        return function_map
 
     def _load_users(self):
         User = get_user_model()
@@ -128,13 +176,14 @@ class Command(BaseCommand):
     def _load_people(self):
         people_map = {}
         users = get_user_model().objects.in_bulk(field_name="username")
+        functions = Function.objects.in_bulk(field_name="code")
         for row in read_csv("people.csv"):
             user = users[row["username"]]
             person, _ = Person.objects.update_or_create(
                 short_code=row["short_code"],
                 defaults={
                     "user": user,
-                    "function_title": row["function_title"],
+                    "function": functions[row["function_code"]],
                     "organizational_unit": row["organizational_unit"],
                     "is_active_profile": as_bool(row["is_active_profile"]),
                 },
@@ -159,9 +208,12 @@ class Command(BaseCommand):
         strategy_map = {}
         for row in read_csv("strategies.csv"):
             strategy, _ = Strategy.objects.update_or_create(
-                title=row["title"],
+                short_code=row["short_code"],
                 defaults={
+                    "sort_order": as_int(row.get("sort_order", "")) or 0,
+                    "short_code": row["short_code"],
                     "short_description": row["short_description"],
+                    "title": row["title"],
                     "document_url": row["document_url"],
                     "valid_from": as_date(row["valid_from"]),
                     "valid_until": as_date(row["valid_until"]),
@@ -256,6 +308,47 @@ class Command(BaseCommand):
             )
             responsibility.full_clean()
             responsibility.save()
+
+    def _ensure_each_measure_has_responsible_people(self, people, levels):
+        active_people = sorted(
+            (person for person in people.values() if person.is_active_profile),
+            key=lambda person: (person.user.last_name, person.user.first_name, person.short_code),
+        )
+        if not active_people:
+            raise CommandError("At least one active person is required to assign Massnahme responsibilities.")
+
+        generator = random.Random(0)
+        measures = sorted(
+            (
+                level
+                for level in levels.values()
+                if level.level == StrategyLevelType.MASSNAHME
+            ),
+            key=lambda level: (level.strategy.title, level.short_code),
+        )
+
+        for measure in measures:
+            existing_responsibilities = list(
+                MeasureResponsibility.objects.filter(
+                    measure=measure,
+                    role=ResponsibilityRole.RESPONSIBLE,
+                ).select_related("person")
+            )
+            target_count = generator.randint(1, min(2, len(active_people)))
+            if len(existing_responsibilities) >= target_count:
+                continue
+
+            existing_person_ids = {responsibility.person_id for responsibility in existing_responsibilities}
+            available_people = [person for person in active_people if person.pk not in existing_person_ids]
+            additional_count = min(target_count - len(existing_responsibilities), len(available_people))
+            for person in generator.sample(available_people, additional_count):
+                responsibility = MeasureResponsibility(
+                    measure=measure,
+                    person=person,
+                    role=ResponsibilityRole.RESPONSIBLE,
+                )
+                responsibility.full_clean()
+                responsibility.save()
 
     def _load_controlling_periods(self):
         periods = {}

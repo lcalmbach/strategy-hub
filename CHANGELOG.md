@@ -4,6 +4,26 @@ All notable changes to this project should be documented in this file.
 
 The format is based on Keep a Changelog, and the project uses Semantic Versioning.
 
+## [0.2.0] - 2026-03-04
+
+### Added
+
+- Strategien haben nun eigene Felder fuer `Kuerzel` und `Sortierung`
+- Personenfunktionen wurden als Stammdatenmodell `Function` mit Codes, Bezeichnungen und Sortierung eingefuehrt
+- Selektiver Demo-Import fuer Personen mit `load_fake_data --replace --person`
+- Dashboard-Erweiterung mit periodischen Zusammenfassungen je aktiver Strategie
+- Plotly-Scatterplots fuer Kosten und Aufwand pro Controlling-Periode
+- Mitarbeitenden-Uebersicht im Dashboard mit Anzahl Massnahmen und Ampelverteilung
+
+### Changed
+
+- Dashboard bezieht sich nun konsequent auf die ausgewaehlte Strategie und zeigt keine Strategie-Auswahl-Tabelle mehr
+- Handlungsfelder-, Ziele- und Massnahmenlisten wurden in Reihenfolge und Spaltenbezeichnungen ueberarbeitet
+- Die Massnahmenliste zeigt verantwortliche Personen als kommaseparierte Kuerzel
+- Die Personenliste zeigt Nachname und Vorname aus dem zugehoerigen Benutzer und erlaubt Sortierung darauf
+- Fake-Daten fuer Personen, Funktionen und Verantwortlichkeiten wurden erweitert und vereinheitlicht
+- Controlling-Record-Filter fuer Massnahmen zeigen nur noch echte Massnahmen statt uebergeordneter Ebenen
+
 ## [0.1.0] - 2026-03-01
 
 

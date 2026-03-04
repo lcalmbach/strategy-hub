@@ -1,10 +1,11 @@
-from django.urls import path
+from django.urls import include, path
 
-from .views import person_crud
+from .views import function_crud, person_crud
 
 
 app_name = "people"
 
 urlpatterns = [
+    path("functions/", include(function_crud)),
     *person_crud,
 ]

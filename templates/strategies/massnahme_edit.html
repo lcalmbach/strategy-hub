@@ -1,0 +1,211 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="de-ch">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Massnahme bearbeiten</title>
+    <link rel="stylesheet" href="/static/css/iommi_main_menu.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: sans-serif;
+            background: #f4f6f8;
+            color: #1f2933;
+        }
+        .page {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 20px 48px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+        .field-wide {
+            grid-column: 1 / -1;
+        }
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+        .field input,
+        .field select,
+        .field textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd2d9;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font: inherit;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th,
+        td {
+            text-align: left;
+            padding: 10px 8px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: top;
+        }
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .button,
+        button {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font: inherit;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .button-primary,
+        button {
+            background: #14532d;
+            color: #fff;
+        }
+        .button-secondary {
+            background: #e5e7eb;
+            color: #111827;
+        }
+        .errors {
+            color: #b42318;
+            margin: 0;
+            padding-left: 18px;
+        }
+        @media (max-width: 720px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .field-wide {
+                grid-column: auto;
+            }
+        }
+    </style>
+</head>
+<body class="{% if request.iommi_main_menu %}sidebar_menu_active{% endif %}">
+    {% if request.iommi_main_menu %}
+        {{ request.iommi_main_menu }}
+    {% endif %}
+
+    <main class="page">
+        <div class="card">
+            <h1>Massnahme bearbeiten</h1>
+            <p>{{ measure.display_label }}</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="/strategies/massnahmen/">
+
+            <section class="card">
+                <h2>Stammdaten</h2>
+                {% if form.non_field_errors %}
+                    <ul class="errors">
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                <div class="grid">
+                    {% for field in form %}
+                        <div class="field{% if field.name == 'description' %} field-wide{% endif %}">
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {% if field.errors %}
+                                <ul class="errors">
+                                    {% for error in field.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Verantwortlichkeiten</h2>
+                {{ responsibilities.management_form }}
+                {% if responsibilities.non_form_errors %}
+                    <ul class="errors">
+                        {% for error in responsibilities.non_form_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Person</th>
+                            <th>Rolle</th>
+                            <th>Beschreibung</th>
+                            <th>Löschen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for responsibility_form in responsibilities %}
+                            <tr>
+                                <td>
+                                    {{ responsibility_form.id }}
+                                    {{ responsibility_form.person }}
+                                    {% if responsibility_form.person.errors %}
+                                        <ul class="errors">
+                                            {% for error in responsibility_form.person.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ responsibility_form.role }}
+                                    {% if responsibility_form.role.errors %}
+                                        <ul class="errors">
+                                            {% for error in responsibility_form.role.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ responsibility_form.description }}
+                                    {% if responsibility_form.description.errors %}
+                                        <ul class="errors">
+                                            {% for error in responsibility_form.description.errors %}
+                                                <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                </td>
+                                <td>{{ responsibility_form.DELETE }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            <div class="actions">
+                <button type="submit">Speichern</button>
+                <a class="button button-secondary" href="/strategies/massnahmen/">Abbrechen</a>
+            </div>
+        </form>
+    </main>
+</body>
+</html>

@@ -1,11 +1,14 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.db.models import Prefetch
+from django.forms import ModelForm, inlineformset_factory
+from django.http import Http404
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import urlencode
 
 from iommi import Action, Column, LAST, Page, Table, html
 
 from core.iommi import icon_edit_column, login_required_crud_paths
-from core.strategy_context import get_active_strategy
+from core.strategy_context import get_active_strategy, require_active_strategy
 from .models import MeasureResponsibility, MeasureType, Strategy, StrategyLevel, StrategyLevelType
 
 
@@ -161,6 +164,38 @@ def strategy_level_redirect_to(form, **_):
     return redirects.get(level, "/strategies/levels/")
 
 
+class MassnahmeForm(ModelForm):
+    class Meta:
+        model = StrategyLevel
+        fields = [
+            "short_code",
+            "title",
+            "description",
+            "parent",
+            "measure_type",
+            "start_date",
+            "end_date",
+            "status",
+            "sort_order",
+        ]
+
+
+class MeasureResponsibilityForm(ModelForm):
+    class Meta:
+        model = MeasureResponsibility
+        fields = ["person", "role", "description"]
+
+
+MassnahmeResponsibilityFormSet = inlineformset_factory(
+    StrategyLevel,
+    MeasureResponsibility,
+    form=MeasureResponsibilityForm,
+    fk_name="measure",
+    extra=5,
+    can_delete=True,
+)
+
+
 def handlungsfeld_choices(request, **_):
     return StrategyLevel.objects.filter(
         strategy_id=active_strategy_id(request),
@@ -199,7 +234,15 @@ def massnahmen_rows(request, **_):
     queryset = StrategyLevel.objects.filter(
         level=StrategyLevelType.MASSNAHME,
         strategy_id=active_strategy_id(request),
-    ).select_related("strategy", "parent", "parent__parent", "measure_type")
+    ).select_related("strategy", "parent", "parent__parent", "measure_type").prefetch_related(
+        Prefetch(
+            "responsibilities",
+            queryset=MeasureResponsibility.objects.select_related("person__user").order_by(
+                "person__short_code",
+            ),
+            to_attr="prefetched_responsibilities",
+        )
+    )
 
     selected_handlungsfeld_id = selected_massnahmen_handlungsfeld_id(request)
     selected_ziel = selected_massnahmen_ziel_id(request)
@@ -222,6 +265,17 @@ def massnahmen_filter_panel(request, **_):
     )
 
 
+def massnahme_responsible_people_display(row, **_):
+    responsibilities = getattr(row, "prefetched_responsibilities", None)
+    if responsibilities is None:
+        responsibilities = row.responsibilities.select_related("person__user").all()
+
+    names = []
+    for responsibility in responsibilities:
+        names.append(responsibility.person.short_code)
+    return ", ".join(dict.fromkeys(names))
+
+
 @login_required
 def massnahmen_page(request):
     page = Page(
@@ -230,6 +284,61 @@ def massnahmen_page(request):
         parts__table=massnahmen_table,
     )
     return page.as_view()(request)
+
+
+@login_required
+@require_active_strategy
+def massnahme_edit_page(request, pk):
+    measure = get_object_or_404(
+        StrategyLevel.objects.select_related("strategy", "parent"),
+        pk=pk,
+        strategy_id=active_strategy_id(request),
+    )
+    if measure.level != StrategyLevelType.MASSNAHME:
+        raise Http404("Only Massnahmen can be edited on this page.")
+
+    form = MassnahmeForm(request.POST or None, instance=measure)
+    form.fields["parent"].queryset = StrategyLevel.objects.filter(
+        strategy_id=measure.strategy_id,
+        level=StrategyLevelType.ZIEL,
+    ).order_by("short_code", "title")
+    form.fields["measure_type"].queryset = MeasureType.objects.order_by("label")
+
+    responsibilities = MassnahmeResponsibilityFormSet(
+        request.POST or None,
+        instance=measure,
+        prefix="responsibilities",
+    )
+
+    if request.method == "POST" and form.is_valid() and responsibilities.is_valid():
+        updated_measure = form.save(commit=False)
+        updated_measure.updated_by = request.user
+        if updated_measure.created_by_id is None:
+            updated_measure.created_by = request.user
+        updated_measure.save()
+        form.save_m2m()
+
+        responsibility_instances = responsibilities.save(commit=False)
+        for deleted in responsibilities.deleted_objects:
+            deleted.delete()
+        for responsibility in responsibility_instances:
+            responsibility.measure = updated_measure
+            responsibility.updated_by = request.user
+            if responsibility.created_by_id is None:
+                responsibility.created_by = request.user
+            responsibility.save()
+        redirect_to = request.POST.get("next") or "/strategies/massnahmen/"
+        return redirect(redirect_to)
+
+    return render(
+        request,
+        "strategies/massnahme_edit.html",
+        {
+            "form": form,
+            "responsibilities": responsibilities,
+            "measure": measure,
+        },
+    )
 
 
 def ziele_create_href(request, **_):
@@ -288,14 +397,14 @@ strategy_crud = login_required_crud_paths(
     edit__auto__exclude=AUDIT_FIELDS,
     detail__title=lambda form, **_: form.instance.title,
     detail__auto__exclude=AUDIT_FIELDS,
-    delete__title=lambda form, **_: f"Strategie loeschen: {form.instance.title}",
+    delete__title=lambda form, **_: f"Strategie löschen: {form.instance.title}",
 )
 
 
 @login_required
 def strategy_card_list(request):
     active = active_strategy(request)
-    strategies = Strategy.objects.filter(is_active=True).order_by("title")
+    strategies = Strategy.objects.filter(is_active=True).order_by("sort_order", "title")
     return render(
         request,
         "strategies/strategy_card_list.html",
@@ -391,7 +500,7 @@ measure_type_crud = login_required_crud_paths(
     edit__auto__exclude=AUDIT_FIELDS,
     detail__title=lambda form, **_: form.instance.label,
     detail__auto__exclude=AUDIT_FIELDS,
-    delete__title=lambda form, **_: f"Massnahmentyp loeschen: {form.instance.label}",
+    delete__title=lambda form, **_: f"Massnahmentyp löschen: {form.instance.label}",
 )
 
 
@@ -407,8 +516,7 @@ responsibility_crud = login_required_crud_paths(
     table__columns__measure__filter__include=True,
     table__columns__person__filter__include=True,
     table__columns__role__filter__include=True,
-    table__columns__valid_from__filter__include=True,
-    table__columns__valid_until__filter__include=True,
+    table__columns__description__filter__include=True,
     table__columns__measure__cell__url=lambda row, **_: f"/strategies/responsibilities/{row.pk}/",
     create__title="Verantwortlichkeit erfassen",
     create__auto__exclude=AUDIT_FIELDS,
@@ -436,7 +544,7 @@ responsibility_crud = login_required_crud_paths(
         strategy_id=active_strategy_id(request),
         level=StrategyLevelType.MASSNAHME,
     ).order_by("short_code", "title"),
-    delete__title=lambda form, **_: f"Verantwortlichkeit loeschen: {form.instance}",
+    delete__title=lambda form, **_: f"Verantwortlichkeit löschen: {form.instance}",
     delete__instance=lambda params, request, **_: MeasureResponsibility.objects.get(
         pk=params.pk,
         measure__strategy_id=active_strategy_id(request),
@@ -458,7 +566,6 @@ handlungsfelder_table = Table(
     ).select_related("strategy"),
     page_size=20,
     columns__id__include=False,
-    columns__strategy__include=False,
     columns__level__include=False,
     columns__description__include=False,
     columns__parent__include=False,
@@ -471,8 +578,14 @@ handlungsfelder_table = Table(
     columns__updated_at__include=False,
     columns__created_by__include=False,
     columns__updated_by__include=False,
+    columns__title__display_name="Handlungsfeld",
     columns__title__filter__include=True,
     columns__short_code__filter__include=True,
+    columns__short_code__after="edit",
+    columns__title__after="short_code",
+    columns__strategy__display_name="Strategie",
+    columns__strategy__after="title",
+    columns__strategy__cell__value=lambda row, **_: row.strategy.short_code if row.strategy else "",
     columns__title__cell__url=lambda row, **_: f"/strategies/levels/{row.pk}/",
     columns__edit=icon_edit_column(
         after=0,
@@ -501,8 +614,11 @@ ziele_table = Table(
     columns__updated_by__include=False,
     columns__title__filter__include=True,
     columns__short_code__filter__include=True,
+    columns__short_code__after="edit",
+    columns__title__after="short_code",
     columns__parent__filter__include=False,
     columns__parent__display_name="Handlungsfeld",
+    columns__parent__after="title",
     columns__title__cell__url=lambda row, **_: f"/strategies/levels/{row.pk}/",
     columns__edit=icon_edit_column(
         after=0,
@@ -527,18 +643,29 @@ massnahmen_table = Table(
     columns__created_by__include=False,
     columns__updated_by__include=False,
     columns__title__filter__include=True,
+    columns__title__display_name="Massnahme",
     columns__short_code__filter__include=True,
+    columns__short_code__after="edit",
+    columns__title__after="short_code",
     columns__parent__filter__include=False,
     columns__parent__display_name="Ziel",
-    columns__parent__after="short_code",
+    columns__parent__after="title",
     columns__parent__cell__value=lambda row, **_: row.parent.title if row.parent else "",
+    columns__responsible_people=Column(
+        display_name="Verantwortlich",
+        after="parent",
+        cell__value=massnahme_responsible_people_display,
+    ),
     columns__start_date__display_name="Jahr von",
+    columns__start_date__after="responsible_people",
     columns__start_date__cell__value=lambda row, **_: row.start_year_display,
     columns__end_date__display_name="Jahr bis",
+    columns__end_date__after="start_date",
     columns__end_date__cell__value=lambda row, **_: row.end_year_display,
+    columns__status__after="end_date",
     columns__title__cell__url=lambda row, **_: f"/strategies/levels/{row.pk}/",
     columns__edit=icon_edit_column(
         after=0,
-        cell__url=lambda row, **_: f"/strategies/levels/{row.pk}/edit/",
+        cell__url=lambda row, **_: f"/strategies/massnahmen/{row.pk}/edit/",
     ),
 )

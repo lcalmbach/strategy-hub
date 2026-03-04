@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
+from django.utils.html import format_html
 from iommi import Column
 
 from core.iommi import icon_delete_column, icon_edit_column, login_required_crud_paths
@@ -25,6 +26,52 @@ def create_controlling_period_instance(request, **_):
     return ControllingPeriod(strategy=active_strategy(request))
 
 
+def ampel_color(plan_value, actual_value):
+    if plan_value == 0 and actual_value == 0:
+        return "#9ca3af"
+    if plan_value == actual_value:
+        return "#16a34a"
+    if plan_value == 0 or actual_value == 0:
+        return "#dc2626"
+
+    larger = max(plan_value, actual_value)
+    smaller = min(plan_value, actual_value)
+    ratio = larger / smaller
+
+    if ratio < 2:
+        return "#f59e0b"
+    return "#dc2626"
+
+
+def ampel_cell(color, title):
+    return format_html(
+        '<span title="{}" aria-label="{}" style="display:inline-block;width:14px;height:14px;border-radius:999px;background:{};"></span>',
+        title,
+        title,
+        color,
+    )
+
+
+def umsetzung_ampel(row, **_):
+    if row.actual_fulfillment_percent == 0:
+        return ampel_cell("#9ca3af", "Umsetzung: noch keine Werte erfasst")
+    color = ampel_color(100, row.actual_fulfillment_percent)
+    return ampel_cell(color, f"Umsetzung: Ist {row.actual_fulfillment_percent}% vs. Plan 100%")
+
+
+def kosten_ampel(row, **_):
+    color = ampel_color(row.plan_cost_chf, row.actual_cost_chf)
+    return ampel_cell(color, f"Kosten: Ist {row.actual_cost_chf} vs. Plan {row.plan_cost_chf}")
+
+
+def aufwand_ampel(row, **_):
+    color = ampel_color(row.plan_effort_person_days, row.actual_effort_person_days)
+    return ampel_cell(
+        color,
+        f"Aufwand: Ist {row.actual_effort_person_days} vs. Plan {row.plan_effort_person_days}",
+    )
+
+
 @login_required
 @require_active_strategy
 def delete_controlling_period_direct(request, pk):
@@ -35,7 +82,7 @@ def delete_controlling_period_direct(request, pk):
     )
     period_name = period.name
     period.delete()
-    messages.success(request, f"Periode geloescht: {period_name}")
+    messages.success(request, f"Periode gelöscht: {period_name}")
     return redirect("/controlling/periods/")
 
 
@@ -49,7 +96,7 @@ def delete_controlling_record_direct(request, pk):
     )
     record_label = str(record)
     record.delete()
-    messages.success(request, f"Record geloescht: {record_label}")
+    messages.success(request, f"Record gelöscht: {record_label}")
     return redirect("/controlling/records/")
 
 
@@ -96,7 +143,7 @@ period_crud = login_required_crud_paths(
         strategy_id=active_strategy_id(request),
     ),
     detail__fields__strategy__include=False,
-    delete__title=lambda form, **_: f"Periode loeschen: {form.instance.name}",
+    delete__title=lambda form, **_: f"Periode löschen: {form.instance.name}",
     delete__instance=lambda params, request, **_: ControllingPeriod.objects.get(
         pk=params.pk,
         strategy_id=active_strategy_id(request),
@@ -121,8 +168,30 @@ record_crud = login_required_crud_paths(
     table__columns__period__display_name="Planungsperiode",
     table__columns__period__include=True,
     table__columns__status__include=True,
+    table__columns__umsetzung=Column(
+        display_name="Umsetzung",
+        after="status",
+        cell__value=umsetzung_ampel,
+        sortable=False,
+    ),
+    table__columns__kosten=Column(
+        display_name="Kosten",
+        after="umsetzung",
+        cell__value=kosten_ampel,
+        sortable=False,
+    ),
+    table__columns__aufwand=Column(
+        display_name="Aufwand",
+        after="kosten",
+        cell__value=aufwand_ampel,
+        sortable=False,
+    ),
     table__columns__period__filter__include=True,
     table__columns__measure__filter__include=True,
+    table__columns__measure__filter__choices=lambda request, **_: StrategyLevel.objects.filter(
+        strategy_id=active_strategy_id(request),
+        level=StrategyLevelType.MASSNAHME,
+    ).order_by("short_code", "title"),
     table__columns__status__filter__include=True,
     table__columns__plan_cost_chf__filter__include=True,
     table__columns__actual_cost_chf__filter__include=True,
@@ -170,7 +239,7 @@ record_crud = login_required_crud_paths(
         strategy_id=active_strategy_id(request),
         level=StrategyLevelType.MASSNAHME,
     ),
-    delete__title=lambda form, **_: f"Record loeschen: {form.instance}",
+    delete__title=lambda form, **_: f"Record löschen: {form.instance}",
     delete__instance=lambda params, request, **_: ControllingRecord.objects.get(
         pk=params.pk,
         measure__strategy_id=active_strategy_id(request),
@@ -216,7 +285,7 @@ record_responsibility_crud = login_required_crud_paths(
     detail__fields__controlling_record__choices=lambda request, **_: ControllingRecord.objects.filter(
         measure__strategy_id=active_strategy_id(request)
     ).select_related("measure", "period"),
-    delete__title=lambda form, **_: f"Verantwortlichkeit loeschen: {form.instance}",
+    delete__title=lambda form, **_: f"Verantwortlichkeit löschen: {form.instance}",
     delete__instance=lambda params, request, **_: ControllingRecordResponsibility.objects.get(
         pk=params.pk,
         controlling_record__measure__strategy_id=active_strategy_id(request),

@@ -21,9 +21,9 @@ def icon_edit_column(**kwargs):
 def icon_delete_column(**kwargs):
     return Column.delete(
         display_name="",
-        extra__icon_attrs__title="Loeschen",
-        extra__icon_attrs__aria_label="Loeschen",
-        header__attrs__title="Loeschen",
+        extra__icon_attrs__title="Löschen",
+        extra__icon_attrs__aria_label="Löschen",
+        header__attrs__title="Löschen",
         **kwargs,
     )
 

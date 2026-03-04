@@ -75,6 +75,7 @@ Load or reload the dataset:
 
 ```bash
 uv run python manage.py load_fake_data --replace
+uv run python manage.py load_fake_data --replace --person
 ```
 
 Bootstrap a local instance with migrations plus demo data:
@@ -95,6 +96,7 @@ The demo import creates:
 - controlling record responsibilities
 
 `load_fake_data --replace` deletes previously imported domain data before recreating it from the CSV files.
+`load_fake_data --replace --person` deletes and reloads only `users` and `people`.
 
 ## Authentication
 

@@ -1,5 +1,45 @@
-username,short_code,function_title,organizational_unit,is_active_profile
-anna.mueller,AMU,Strategieverantwortliche,Direktion,true
-marco.keller,MKE,Controller,Controlling,true
-sara.roth,SRO,Projektleiterin,Digitale Transformation,true
-tom.fischer,TFI,Prozessmanager,Produktion,true
+username,short_code,function_code,organizational_unit,is_active_profile
+anna.mueller,AM,BL,Direktion,true
+marco.keller,MK,FTL,Controlling,true
+sara.roth,SR,DM,Digitale Transformation,true
+tom.fischer,TF,AL,Produktion,true
+lea.brunner,LB,FTL,Digitale Transformation,true
+noah.schmid,NS,BL,Controlling,true
+nina.weber,NW,DM,Direktion,true
+jonas.meier,JM,FTL,Finanzen,true
+lara.graf,LG,DM,Digitale Transformation,true
+ben.huber,BH,MA,Produktion,true
+zoe.kunz,ZK,BL,Informatik,true
+mia.steiner,MS,MA,Kommunikation,true
+leo.frei,LF,MA,Informatik,true
+jana.vogel,JV,MA,Personal,true
+elias.baumann,EB,DM,Informatik,true
+clara.winkler,CW,FTL,Controlling,true
+samuel.gerber,SG,AL,Direktion,true
+paula.marti,PM,MA,Digitale Transformation,true
+david.egger,DE,FTL,Produktion,true
+liam.zimmermann,LZ,MA,Informatik,true
+emma.stutz,ES,BL,Finanzen,true
+felix.ackermann,FA,MA,Personal,true
+lara.kuhn,LK,FTL,Kommunikation,true
+janis.otto,JO,DM,Controlling,true
+milena.sutter,MT,MA,Direktion,true
+nico.hauser,NH,FTL,Produktion,true
+sophie.bieri,SB,FTL,Digitale Transformation,true
+linus.frick,LI,AL,Informatik,true
+alina.keller,AK,MA,Finanzen,true
+tim.gisler,TG,DM,Informatik,true
+selina.luthi,SL,FTL,Personal,true
+roman.jaeger,RJ,MA,Digitale Transformation,true
+luisa.moser,LM,MA,Kommunikation,true
+matteo.koch,MV,MA,Produktion,true
+anja.fuchs,AF,FTL,Direktion,true
+silvan.lang,SO,MA,Controlling,true
+rahel.keller,RK,BL,Personal,true
+fabio.wyss,FW,FTL,Informatik,true
+ina.reinhard,IR,MA,Finanzen,true
+jan.bucher,JB,MA,Informatik,true
+lorena.hess,LH,DM,Kommunikation,true
+michel.stalder,MG,MA,Produktion,true
+nadine.furrer,NF,DM,Digitale Transformation,true
+remo.aeschlimann,RA,FTL,Direktion,true

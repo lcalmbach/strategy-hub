@@ -29,7 +29,7 @@
             <div>
                 <p class="eyebrow">Strategieauswahl</p>
                 <h1>Home</h1>
-                <p class="lead">Waehle eine Strategie als Arbeitskontext oder bearbeite die Stammdaten direkt auf der Kachel.</p>
+                <p class="lead">Wähle eine Strategie als Arbeitskontext oder bearbeite die Stammdaten direkt auf der Kachel.</p>
             </div>
             <a class="create-link" href="/strategies/create/">Neue Strategie</a>
         </header>
@@ -58,7 +58,7 @@
 
                     <div class="card-actions">
                         <a class="select-link{% if active_strategy_id == strategy.id %} is-current{% endif %}" href="/select-strategy/{{ strategy.id }}/">
-                            {% if active_strategy_id == strategy.id %}Ausgewaehlt{% else %}Auswaehlen{% endif %}
+                            {% if active_strategy_id == strategy.id %}Ausgewählt{% else %}Auswählen{% endif %}
                         </a>
                         {% if strategy.document_url %}
                             <a class="doc-link" href="{{ strategy.document_url }}" target="_blank" rel="noreferrer">Dokument</a>

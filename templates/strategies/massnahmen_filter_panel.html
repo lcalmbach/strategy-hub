@@ -15,7 +15,7 @@
             <div class="col-md-4">
                 <label class="form-label" for="massnahmen-ziel-filter">Ziel</label>
                 <select class="form-select" id="massnahmen-ziel-filter" name="ziel_filter" onchange="this.form.submit()">
-                    <option value="">Bitte waehlen</option>
+                    <option value="">Bitte wählen</option>
                     {% for ziel in fragment.extra.ziele %}
                         <option value="{{ ziel.pk }}" {% if fragment.extra.selected_ziel_id == ziel.pk|stringformat:'s' %}selected{% endif %}>
                             {{ ziel.display_label }}
@@ -24,7 +24,7 @@
                 </select>
             </div>
             <div class="col-md-4 d-flex gap-2 justify-content-md-end">
-                <a class="btn btn-outline-secondary" href="/strategies/massnahmen/">Zuruecksetzen</a>
+                <a class="btn btn-outline-secondary" href="/strategies/massnahmen/">Zurücksetzen</a>
                 <a
                     class="primary_action{% if fragment.extra.new_disabled %} disabled{% endif %}"
                     href="{{ fragment.extra.new_href }}"

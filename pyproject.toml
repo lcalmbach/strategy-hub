@@ -1,12 +1,13 @@
 [project]
 name = "strategy-hub"
-version = "0.1.4"
+version = "0.2.0"
 description = "Strategy Hub for strategy management and controlling"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "Django>=5.1,<5.3",
     "iommi>=7.18",
+    "plotly>=6.0",
     "psycopg[binary]>=3.2",
     "Pillow>=11.0",
     "django-storages[s3]>=1.14.6",
@@ -25,7 +26,7 @@ dev = [
 package = false
 
 [tool.strategy_hub]
-version_date = "2026-03-03"
+version_date = "2026-03-04"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"

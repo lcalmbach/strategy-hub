@@ -1,0 +1,6 @@
+sort_order,code,label,is_active
+10,AL,Amtsleitung,true
+20,BL,Bereichsleitung,true
+30,FTL,Fachteam Leiter,true
+40,DM,Datenmanagement,true
+50,MA,Mitarbeitende,true

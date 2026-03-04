@@ -20,7 +20,7 @@ class StrategyLevelType(models.TextChoices):
 class ResponsibilityRole(models.TextChoices):
     RESPONSIBLE = "responsible", "Verantwortlich"
     CO_RESPONSIBLE = "co_responsible", "Mitverantwortlich"
-    SUPPORTING = "supporting", "Unterstuetzend"
+    SUPPORTING = "supporting", "Unterstützend"
     APPROVER = "approver", "Freigebend"
 
 
@@ -32,25 +32,27 @@ class MeasureStatus(models.TextChoices):
 
 
 class Strategy(TimestampedModel, UserStampedModel):
+    sort_order = models.PositiveIntegerField("Sortierung", default=0)
+    short_code = models.CharField("Kürzel", max_length=50, unique=True)
     title = models.CharField("Titel", max_length=255)
     short_description = models.TextField("Kurzbeschreibung")
     image = models.ImageField("Bild", upload_to="strategies/", blank=True)
     document_url = models.URLField("Dokument-Link", blank=True)
-    valid_from = models.DateField("Gueltig von")
-    valid_until = models.DateField("Gueltig bis", null=True, blank=True)
+    valid_from = models.DateField("Gültig von")
+    valid_until = models.DateField("Gültig bis", null=True, blank=True)
     status = models.CharField("Status", max_length=20, choices=StrategyStatus.choices, default=StrategyStatus.PLANNED)
     vision = models.TextField("Vision")
     mission = models.TextField("Mission")
     is_active = models.BooleanField("Aktiv", default=True)
 
     class Meta:
-        ordering = ["title"]
+        ordering = ["sort_order", "title"]
         verbose_name = "Strategie"
         verbose_name_plural = "Strategien"
 
     def clean(self) -> None:
         if self.valid_until and self.valid_until < self.valid_from:
-            raise ValidationError({"valid_until": "Gueltig bis darf nicht vor Gueltig von liegen."})
+            raise ValidationError({"valid_until": "Gültig bis darf nicht vor Gültig von liegen."})
 
     def __str__(self) -> str:
         return self.title
@@ -74,7 +76,7 @@ class StrategyLevel(TimestampedModel, UserStampedModel, OrderedModel):
     strategy = models.ForeignKey(Strategy, verbose_name="Strategie", on_delete=models.CASCADE, related_name="levels")
     level = models.CharField("Ebene", max_length=20, choices=StrategyLevelType.choices)
     title = models.CharField("Titel", max_length=255)
-    short_code = models.CharField("Kuerzel", max_length=50)
+    short_code = models.CharField("Kürzel", max_length=50)
     description = models.TextField("Beschreibung", blank=True)
     parent = models.ForeignKey(
         "self",
@@ -125,44 +127,44 @@ class StrategyLevel(TimestampedModel, UserStampedModel, OrderedModel):
     def clean(self) -> None:
         errors = {}
         if self.parent and self.parent.strategy_id != self.strategy_id:
-            errors["parent"] = "Parent muss zur gleichen Strategie gehoeren."
+            errors["parent"] = "Parent muss zur gleichen Strategie gehören."
 
         if self.level == StrategyLevelType.HANDLUNGSFELD:
             if self.parent_id:
-                errors["parent"] = "Handlungsfelder duerfen keinen Parent haben."
+                errors["parent"] = "Handlungsfelder dürfen keinen Parent haben."
             if self.measure_type_id:
-                errors["measure_type"] = "Massnahme-Typ ist nur fuer Massnahmen erlaubt."
+                errors["measure_type"] = "Massnahme-Typ ist nur für Massnahmen erlaubt."
             if self.start_date:
-                errors["start_date"] = "Startdatum ist nur fuer Massnahmen erlaubt."
+                errors["start_date"] = "Startdatum ist nur für Massnahmen erlaubt."
             if self.end_date:
-                errors["end_date"] = "Enddatum ist nur fuer Massnahmen erlaubt."
+                errors["end_date"] = "Enddatum ist nur für Massnahmen erlaubt."
             if self.status:
-                errors["status"] = "Status ist nur fuer Massnahmen erlaubt."
+                errors["status"] = "Status ist nur für Massnahmen erlaubt."
 
         if self.level == StrategyLevelType.ZIEL:
             if not self.parent_id:
                 errors["parent"] = "Ziele brauchen ein Handlungsfeld als Parent."
             elif self.parent.level != StrategyLevelType.HANDLUNGSFELD:
-                errors["parent"] = "Ziele duerfen nur unter Handlungsfeldern liegen."
+                errors["parent"] = "Ziele dürfen nur unter Handlungsfeldern liegen."
             if self.measure_type_id:
-                errors["measure_type"] = "Massnahme-Typ ist nur fuer Massnahmen erlaubt."
+                errors["measure_type"] = "Massnahme-Typ ist nur für Massnahmen erlaubt."
             if self.start_date:
-                errors["start_date"] = "Startdatum ist nur fuer Massnahmen erlaubt."
+                errors["start_date"] = "Startdatum ist nur für Massnahmen erlaubt."
             if self.end_date:
-                errors["end_date"] = "Enddatum ist nur fuer Massnahmen erlaubt."
+                errors["end_date"] = "Enddatum ist nur für Massnahmen erlaubt."
             if self.status:
-                errors["status"] = "Status ist nur fuer Massnahmen erlaubt."
+                errors["status"] = "Status ist nur für Massnahmen erlaubt."
 
         if self.level == StrategyLevelType.MASSNAHME:
             if not self.parent_id:
                 errors["parent"] = "Massnahmen brauchen ein Ziel als Parent."
             elif self.parent.level != StrategyLevelType.ZIEL:
-                errors["parent"] = "Massnahmen duerfen nur unter Zielen liegen."
+                errors["parent"] = "Massnahmen dürfen nur unter Zielen liegen."
             if self.start_date and self.end_date and self.end_date < self.start_date:
                 errors["end_date"] = "Enddatum darf nicht vor Startdatum liegen."
 
         if self.level != StrategyLevelType.MASSNAHME and self.measure_type_id:
-            errors["measure_type"] = "Massnahme-Typ ist nur fuer Massnahmen erlaubt."
+            errors["measure_type"] = "Massnahme-Typ ist nur für Massnahmen erlaubt."
 
         if errors:
             raise ValidationError(errors)
@@ -185,8 +187,9 @@ class MeasureResponsibility(TimestampedModel, UserStampedModel):
         related_name="measure_responsibilities",
     )
     role = models.CharField("Rolle", max_length=30, choices=ResponsibilityRole.choices)
-    valid_from = models.DateField("Gueltig von", null=True, blank=True)
-    valid_until = models.DateField("Gueltig bis", null=True, blank=True)
+    description = models.TextField("Beschreibung", blank=True)
+    valid_from = models.DateField("Gültig von", null=True, blank=True)
+    valid_until = models.DateField("Gültig bis", null=True, blank=True)
 
     class Meta:
         ordering = ["measure", "role", "person"]
@@ -196,9 +199,9 @@ class MeasureResponsibility(TimestampedModel, UserStampedModel):
     def clean(self) -> None:
         errors = {}
         if self.measure.level != StrategyLevelType.MASSNAHME:
-            errors["measure"] = "Verantwortlichkeiten duerfen nur Massnahmen zugeordnet werden."
+            errors["measure"] = "Verantwortlichkeiten dürfen nur Massnahmen zugeordnet werden."
         if self.valid_from and self.valid_until and self.valid_until < self.valid_from:
-            errors["valid_until"] = "Gueltig bis darf nicht vor Gueltig von liegen."
+            errors["valid_until"] = "Gültig bis darf nicht vor Gültig von liegen."
         if errors:
             raise ValidationError(errors)
 

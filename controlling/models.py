@@ -9,15 +9,16 @@ from strategies.models import ResponsibilityRole, StrategyLevel, StrategyLevelTy
 
 class ControllingPeriodStatus(models.TextChoices):
     DRAFT = "draft", "Entwurf"
-    OPEN_FOR_PLANNING = "open_for_planning", "Offen fuer Planung"
-    OPEN_FOR_ACTUALS = "open_for_actuals", "Offen fuer Ist-Erfassung"
+    OPEN_FOR_PLANNING = "open_for_planning", "Offen für Planung"
+    OPEN_FOR_ACTUALS = "open_for_actuals", "Offen für Ist-Erfassung"
     CLOSED = "closed", "Abgeschlossen"
 
 
 class ControllingRecordStatus(models.TextChoices):
     OPEN = "open", "Offen"
-    PLANNING_IN_PROGRESS = "planning_in_progress", "Planung laeuft"
-    READY_FOR_ACTUALS = "ready_for_actuals", "Bereit fuer Ist-Erfassung"
+    PLANNING_IN_PROGRESS = "planning_in_progress", "Planung läuft"
+    PLANNING_IN_COMPLETED = "planning_completed", "Planung abgeschlossen"
+    READY_FOR_ACTUALS = "ready_for_actuals", "Bereit für Ist-Erfassung"
     COMPLETED = "completed", "Abgeschlossen"
 
 
@@ -93,7 +94,7 @@ class ControllingRecord(TimestampedModel, UserStampedModel):
     plan_cost_chf = models.DecimalField("Plan-Kosten CHF", max_digits=12, decimal_places=2, default=Decimal("0.00"))
     plan_cost_description = models.TextField("Plan-Kosten Beschreibung", blank=True)
     actual_fulfillment_percent = models.DecimalField(
-        "Ist-Erfuellungsgrad Prozent",
+        "Ist-Erfüllungsgrad Prozent",
         max_digits=5,
         decimal_places=2,
         default=Decimal("0.00"),
@@ -120,11 +121,11 @@ class ControllingRecord(TimestampedModel, UserStampedModel):
     def clean(self) -> None:
         errors = {}
         if self.measure.level != StrategyLevelType.MASSNAHME:
-            errors["measure"] = "Controlling-Records duerfen nur Massnahmen referenzieren."
+            errors["measure"] = "Controlling-Records dürfen nur Massnahmen referenzieren."
         if self.period_id and self.measure_id and self.period.strategy_id != self.measure.strategy_id:
-            errors["period"] = "Periode und Massnahme muessen zur gleichen Strategie gehoeren."
+            errors["period"] = "Periode und Massnahme müssen zur gleichen Strategie gehören."
         if self.actual_fulfillment_percent < 0 or self.actual_fulfillment_percent > 100:
-            errors["actual_fulfillment_percent"] = "Erfuellungsgrad muss zwischen 0 und 100 liegen."
+            errors["actual_fulfillment_percent"] = "Erfüllungsgrad muss zwischen 0 und 100 liegen."
         if errors:
             raise ValidationError(errors)
 

@@ -4,10 +4,30 @@ from django.db import models
 from core.models import TimestampedModel, UserStampedModel
 
 
+class Function(TimestampedModel, UserStampedModel):
+    code = models.CharField("Code", max_length=50, unique=True)
+    label = models.CharField("Bezeichnung", max_length=255, unique=True)
+    sort_order = models.PositiveIntegerField("Sortierung", default=0)
+    is_active = models.BooleanField("Aktiv", default=True)
+
+    class Meta:
+        ordering = ["sort_order", "label"]
+        verbose_name = "Funktion"
+        verbose_name_plural = "Funktionen"
+
+    def __str__(self) -> str:
+        return f"{self.code} {self.label}".strip()
+
+
 class Person(TimestampedModel, UserStampedModel):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, verbose_name="Benutzer", on_delete=models.CASCADE)
-    short_code = models.CharField("Kuerzel", max_length=50, unique=True)
-    function_title = models.CharField("Funktion", max_length=255)
+    short_code = models.CharField("Kürzel", max_length=50, unique=True)
+    function = models.ForeignKey(
+        Function,
+        verbose_name="Funktion",
+        on_delete=models.PROTECT,
+        related_name="people",
+    )
     organizational_unit = models.CharField("Organisationseinheit", max_length=255, blank=True)
     is_active_profile = models.BooleanField("Aktiv", default=True)
 
