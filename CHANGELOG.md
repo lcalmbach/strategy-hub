@@ -4,6 +4,23 @@ All notable changes to this project should be documented in this file.
 
 The format is based on Keep a Changelog, and the project uses Semantic Versioning.
 
+## [0.3.0] - 2026-03-05
+
+### Added
+
+- Zentrale Stammdatentabellen `CodeCategory` und `Code` inkl. Admin-Ansichten
+- Kategorie-spezifische Code-Zugriffe via Proxy-Modelle fuer `initiative_status` und `initiative_role`
+- Manuelle Ampel-Felder fuer Controlling-Records: Umsetzungsstand, Ausgaben und Aufwand
+- Statusabhaengige Record-Formulare (Planung, Ist-Erfassung, Abgeschlossen)
+
+### Changed
+
+- Ampel-Anzeige verwendet nun effektive Status mit Vorrang fuer manuelle Werte
+- Verantwortliche in der Controlling-Record-Liste werden als Kuerzel angezeigt
+- Record-Verantwortlichkeiten wurden mit Massnahmen-Verantwortlichkeiten synchronisiert (inkl. Mehrfach-Zuweisungen)
+- Dashboard zeigt Aufwand/Kosten ohne Kommastellen; Kosten mit Tausendertrennzeichen (`'`)
+- Iommi-Debug-Overlay (`Code`, `Tree`, `Pick`, `Code finder`) ist standardmaessig deaktiviert
+
 ## [0.2.0] - 2026-03-04
 
 ### Added

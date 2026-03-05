@@ -1,13 +1,14 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect
 from django.utils.html import format_html
 from iommi import Column
 
 from core.iommi import icon_delete_column, icon_edit_column, login_required_crud_paths
 from core.strategy_context import get_active_strategy, require_active_strategy
-from strategies.models import StrategyLevel, StrategyLevelType
-from .models import ControllingPeriod, ControllingRecord, ControllingRecordResponsibility
+from strategies.models import ResponsibilityRole, StrategyLevel, StrategyLevelType
+from .models import AmpelStatus, ControllingPeriod, ControllingRecord, ControllingRecordResponsibility, ControllingRecordStatus
 
 
 AUDIT_FIELDS = ["created_at", "updated_at", "created_by", "updated_by"]
@@ -26,21 +27,73 @@ def create_controlling_period_instance(request, **_):
     return ControllingPeriod(strategy=active_strategy(request))
 
 
-def ampel_color(plan_value, actual_value):
-    if plan_value == 0 and actual_value == 0:
-        return "#9ca3af"
-    if plan_value == actual_value:
-        return "#16a34a"
-    if plan_value == 0 or actual_value == 0:
-        return "#dc2626"
+PLAN_FIELDS = {
+    "plan_result_description",
+    "plan_effort_person_days",
+    "plan_effort_description",
+    "plan_cost_chf",
+    "plan_cost_description",
+}
+ACTUAL_FIELDS = {
+    "actual_fulfillment_percent",
+    "actual_result_description",
+    "actual_effort_person_days",
+    "actual_effort_description",
+    "actual_cost_chf",
+    "actual_cost_description",
+    "umsetzung_status_manual",
+    "kosten_status_manual",
+    "aufwand_status_manual",
+}
 
-    larger = max(plan_value, actual_value)
-    smaller = min(plan_value, actual_value)
-    ratio = larger / smaller
 
-    if ratio < 2:
-        return "#f59e0b"
-    return "#dc2626"
+def current_record_status(request=None, form=None, **_):
+    if request is not None:
+        posted_status = request.POST.get("status")
+        if posted_status:
+            return posted_status
+        query_status = request.GET.get("status")
+        if query_status:
+            return query_status
+
+    if form is not None and getattr(form, "instance", None) is not None:
+        return form.instance.status
+    return ControllingRecordStatus.OPEN
+
+
+def include_record_field(field_name: str, request=None, form=None, **_):
+    status = current_record_status(request=request, form=form)
+    if status == ControllingRecordStatus.PLANNING_IN_PROGRESS:
+        return field_name in PLAN_FIELDS
+    if status == ControllingRecordStatus.READY_FOR_ACTUALS:
+        return field_name in ACTUAL_FIELDS
+    if status == ControllingRecordStatus.COMPLETED:
+        return True
+    return True
+
+
+def record_field_include(field_name: str):
+    return lambda request=None, form=None, **kwargs: include_record_field(
+        field_name,
+        request=request,
+        form=form,
+        **kwargs,
+    )
+
+
+AMPEL_COLORS = {
+    AmpelStatus.GREEN: "#16a34a",
+    AmpelStatus.YELLOW: "#f59e0b",
+    AmpelStatus.RED: "#dc2626",
+    "": "#9ca3af",
+}
+
+AMPEL_LABELS = {
+    AmpelStatus.GREEN: "Grün",
+    AmpelStatus.YELLOW: "Gelb",
+    AmpelStatus.RED: "Rot",
+    "": "Keine Ampel",
+}
 
 
 def ampel_cell(color, title):
@@ -52,24 +105,49 @@ def ampel_cell(color, title):
     )
 
 
+def ampel_cell_for_status(status: str, title: str):
+    return ampel_cell(AMPEL_COLORS.get(status, "#9ca3af"), title)
+
+
 def umsetzung_ampel(row, **_):
-    if row.actual_fulfillment_percent == 0:
-        return ampel_cell("#9ca3af", "Umsetzung: noch keine Werte erfasst")
-    color = ampel_color(100, row.actual_fulfillment_percent)
-    return ampel_cell(color, f"Umsetzung: Ist {row.actual_fulfillment_percent}% vs. Plan 100%")
+    source = "manuell" if row.umsetzung_status_manual else "automatisch"
+    status = row.umsetzung_status_effective
+    title = (
+        f"Umsetzung ({source}): {AMPEL_LABELS.get(status, 'Keine Ampel')} "
+        f"(Ist {row.actual_fulfillment_percent}% vs. Plan 100%)"
+    )
+    return ampel_cell_for_status(status, title)
 
 
 def kosten_ampel(row, **_):
-    color = ampel_color(row.plan_cost_chf, row.actual_cost_chf)
-    return ampel_cell(color, f"Kosten: Ist {row.actual_cost_chf} vs. Plan {row.plan_cost_chf}")
+    source = "manuell" if row.kosten_status_manual else "automatisch"
+    status = row.kosten_status_effective
+    title = (
+        f"Ausgaben ({source}): {AMPEL_LABELS.get(status, 'Keine Ampel')} "
+        f"(Ist {row.actual_cost_chf} vs. Plan {row.plan_cost_chf})"
+    )
+    return ampel_cell_for_status(status, title)
 
 
 def aufwand_ampel(row, **_):
-    color = ampel_color(row.plan_effort_person_days, row.actual_effort_person_days)
-    return ampel_cell(
-        color,
-        f"Aufwand: Ist {row.actual_effort_person_days} vs. Plan {row.plan_effort_person_days}",
+    source = "manuell" if row.aufwand_status_manual else "automatisch"
+    status = row.aufwand_status_effective
+    title = (
+        f"Aufwand ({source}): {AMPEL_LABELS.get(status, 'Keine Ampel')} "
+        f"(Ist {row.actual_effort_person_days} vs. Plan {row.plan_effort_person_days})"
     )
+    return ampel_cell_for_status(status, title)
+
+
+def responsible_people_display(row, **_):
+    responsibilities = getattr(row, "prefetched_responsibilities", None)
+    if responsibilities is None:
+        responsibilities = row.responsibilities.select_related("person__user").filter(role=ResponsibilityRole.RESPONSIBLE)
+
+    short_codes = []
+    for responsibility in responsibilities:
+        short_codes.append(responsibility.person.short_code)
+    return ", ".join(dict.fromkeys(short_codes))
 
 
 @login_required
@@ -158,12 +236,26 @@ record_crud = login_required_crud_paths(
     table__page_size=25,
     table__rows=lambda request, **_: ControllingRecord.objects.filter(
         measure__strategy_id=active_strategy_id(request)
-    ).select_related("period", "measure", "measure__parent", "measure__strategy"),
+    ).select_related("period", "measure", "measure__parent", "measure__strategy").prefetch_related(
+        Prefetch(
+            "responsibilities",
+            queryset=ControllingRecordResponsibility.objects.select_related("person__user")
+            .filter(role=ResponsibilityRole.RESPONSIBLE)
+            .order_by("person__short_code"),
+            to_attr="prefetched_responsibilities",
+        )
+    ),
     table__columns__id__include=False,
     table__columns__measure__display_name="Massnahme",
     table__columns__measure__include=True,
     table__columns__measure__cell__value=lambda row, **_: (
         row.measure.display_label[:50] + "..." if len(row.measure.display_label) > 50 else row.measure.display_label
+    ),
+    table__columns__responsible=Column(
+        display_name="Verantwortlich",
+        after="measure",
+        cell__value=responsible_people_display,
+        sortable=False,
     ),
     table__columns__period__display_name="Planungsperiode",
     table__columns__period__include=True,
@@ -196,6 +288,9 @@ record_crud = login_required_crud_paths(
     table__columns__plan_cost_chf__filter__include=True,
     table__columns__actual_cost_chf__filter__include=True,
     table__columns__plan_result_description__include=False,
+    table__columns__umsetzung_status_manual__include=False,
+    table__columns__kosten_status_manual__include=False,
+    table__columns__aufwand_status_manual__include=False,
     table__columns__plan_effort_person_days__include=False,
     table__columns__plan_effort_description__include=False,
     table__columns__plan_cost_chf__include=False,
@@ -219,6 +314,20 @@ record_crud = login_required_crud_paths(
         strategy_id=active_strategy_id(request),
         level=StrategyLevelType.MASSNAHME,
     ),
+    create__fields__plan_result_description__include=record_field_include("plan_result_description"),
+    create__fields__plan_effort_person_days__include=record_field_include("plan_effort_person_days"),
+    create__fields__plan_effort_description__include=record_field_include("plan_effort_description"),
+    create__fields__plan_cost_chf__include=record_field_include("plan_cost_chf"),
+    create__fields__plan_cost_description__include=record_field_include("plan_cost_description"),
+    create__fields__actual_fulfillment_percent__include=record_field_include("actual_fulfillment_percent"),
+    create__fields__actual_result_description__include=record_field_include("actual_result_description"),
+    create__fields__actual_effort_person_days__include=record_field_include("actual_effort_person_days"),
+    create__fields__actual_effort_description__include=record_field_include("actual_effort_description"),
+    create__fields__actual_cost_chf__include=record_field_include("actual_cost_chf"),
+    create__fields__actual_cost_description__include=record_field_include("actual_cost_description"),
+    create__fields__umsetzung_status_manual__include=record_field_include("umsetzung_status_manual"),
+    create__fields__kosten_status_manual__include=record_field_include("kosten_status_manual"),
+    create__fields__aufwand_status_manual__include=record_field_include("aufwand_status_manual"),
     edit__title="Controlling-Record bearbeiten",
     edit__auto__exclude=AUDIT_FIELDS,
     edit__instance=lambda params, request, **_: ControllingRecord.objects.get(
@@ -229,6 +338,23 @@ record_crud = login_required_crud_paths(
         strategy_id=active_strategy_id(request),
         level=StrategyLevelType.MASSNAHME,
     ),
+    edit__fields__plan_result_description__include=record_field_include("plan_result_description"),
+    edit__fields__plan_effort_person_days__include=record_field_include("plan_effort_person_days"),
+    edit__fields__plan_effort_description__include=record_field_include("plan_effort_description"),
+    edit__fields__plan_cost_chf__include=record_field_include("plan_cost_chf"),
+    edit__fields__plan_cost_description__include=record_field_include("plan_cost_description"),
+    edit__fields__actual_fulfillment_percent__include=record_field_include("actual_fulfillment_percent"),
+    edit__fields__actual_result_description__include=record_field_include("actual_result_description"),
+    edit__fields__actual_effort_person_days__include=record_field_include("actual_effort_person_days"),
+    edit__fields__actual_effort_description__include=record_field_include("actual_effort_description"),
+    edit__fields__actual_cost_chf__include=record_field_include("actual_cost_chf"),
+    edit__fields__actual_cost_description__include=record_field_include("actual_cost_description"),
+    edit__fields__umsetzung_status_manual__include=record_field_include("umsetzung_status_manual"),
+    edit__fields__umsetzung_status_manual__after="actual_cost_description",
+    edit__fields__kosten_status_manual__include=record_field_include("kosten_status_manual"),
+    edit__fields__kosten_status_manual__after="umsetzung_status_manual",
+    edit__fields__aufwand_status_manual__include=record_field_include("aufwand_status_manual"),
+    edit__fields__aufwand_status_manual__after="kosten_status_manual",
     detail__title=lambda form, **_: str(form.instance),
     detail__auto__exclude=AUDIT_FIELDS,
     detail__instance=lambda params, request, **_: ControllingRecord.objects.get(
@@ -239,6 +365,20 @@ record_crud = login_required_crud_paths(
         strategy_id=active_strategy_id(request),
         level=StrategyLevelType.MASSNAHME,
     ),
+    detail__fields__plan_result_description__include=record_field_include("plan_result_description"),
+    detail__fields__plan_effort_person_days__include=record_field_include("plan_effort_person_days"),
+    detail__fields__plan_effort_description__include=record_field_include("plan_effort_description"),
+    detail__fields__plan_cost_chf__include=record_field_include("plan_cost_chf"),
+    detail__fields__plan_cost_description__include=record_field_include("plan_cost_description"),
+    detail__fields__actual_fulfillment_percent__include=record_field_include("actual_fulfillment_percent"),
+    detail__fields__actual_result_description__include=record_field_include("actual_result_description"),
+    detail__fields__actual_effort_person_days__include=record_field_include("actual_effort_person_days"),
+    detail__fields__actual_effort_description__include=record_field_include("actual_effort_description"),
+    detail__fields__actual_cost_chf__include=record_field_include("actual_cost_chf"),
+    detail__fields__actual_cost_description__include=record_field_include("actual_cost_description"),
+    detail__fields__umsetzung_status_manual__include=record_field_include("umsetzung_status_manual"),
+    detail__fields__kosten_status_manual__include=record_field_include("kosten_status_manual"),
+    detail__fields__aufwand_status_manual__include=record_field_include("aufwand_status_manual"),
     delete__title=lambda form, **_: f"Record löschen: {form.instance}",
     delete__instance=lambda params, request, **_: ControllingRecord.objects.get(
         pk=params.pk,

@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from core.management.commands.load_fake_data import Command
+from core.models import Code, CodeCategoryKeys, InitiativeStatusCode
 from people.models import Function, Person
 from strategies.models import MeasureResponsibility, ResponsibilityRole, Strategy, StrategyLevel, StrategyLevelType
 
@@ -128,3 +129,20 @@ class LoadFakeDataCommandTest(TestCase):
         self.assertGreaterEqual(existing_responsibilities.count(), 1)
         self.assertLessEqual(existing_responsibilities.count(), 2)
         self.assertEqual(existing_responsibilities.filter(person=self.person_one).count(), 1)
+
+
+class CategoryCodeManagerTest(TestCase):
+    def test_proxy_manager_uses_fixed_category_and_filters_by_it(self):
+        created = InitiativeStatusCode.objects.create(
+            code="planned",
+            name="Geplant",
+            short_name="Planned",
+            sort_order=10,
+        )
+
+        self.assertEqual(created.category.key, CodeCategoryKeys.INITIATIVE_STATUS)
+        self.assertEqual(InitiativeStatusCode.objects.count(), 1)
+        self.assertEqual(
+            Code.objects.filter(category__key=CodeCategoryKeys.INITIATIVE_STATUS).count(),
+            1,
+        )

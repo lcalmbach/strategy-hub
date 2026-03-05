@@ -22,12 +22,22 @@ def decimal_display(value):
     return f"{(value or Decimal('0.00')):.2f}"
 
 
-def ampel_bucket(fulfillment_percent):
-    if fulfillment_percent == 0:
+def rounded_int_display(value):
+    return f"{int((value or Decimal('0.00')).quantize(Decimal('1')))}"
+
+
+def rounded_int_with_separator_display(value):
+    number = int((value or Decimal("0.00")).quantize(Decimal("1")))
+    return f"{number:,}".replace(",", "'")
+
+
+def ampel_bucket(record):
+    status = record.umsetzung_status_effective
+    if not status:
         return None
-    if fulfillment_percent == 100:
+    if status == "green":
         return "gruen"
-    if fulfillment_percent >= 50:
+    if status == "yellow":
         return "orange"
     return "rot"
 
@@ -185,10 +195,10 @@ def render_goal_summary_table(period):
             (
                 f"{row['measure__parent__short_code']} {row['measure__parent__title']}".strip(),
                 row["measures"],
-                decimal_display(row["plan_effort"]),
-                decimal_display(row["actual_effort"]),
-                decimal_display(row["plan_cost"]),
-                decimal_display(row["actual_cost"]),
+                rounded_int_display(row["plan_effort"]),
+                rounded_int_display(row["actual_effort"]),
+                rounded_int_with_separator_display(row["plan_cost"]),
+                rounded_int_with_separator_display(row["actual_cost"]),
             )
             for row in goal_rows
         ),
@@ -225,7 +235,7 @@ def colored_dot(color, label):
 def render_people_summary_table(period):
     summaries = {}
     for record in period.records.all():
-        bucket = ampel_bucket(record.actual_fulfillment_percent)
+        bucket = ampel_bucket(record)
         responsibilities = [
             responsibility
             for responsibility in record.measure.responsibilities.all()
@@ -327,7 +337,7 @@ def render_period_summary(period):
 
     ampel_counts = {"gruen": 0, "orange": 0, "rot": 0}
     for record in records:
-        bucket = ampel_bucket(record.actual_fulfillment_percent)
+        bucket = ampel_bucket(record)
         if bucket:
             ampel_counts[bucket] += 1
 
@@ -339,10 +349,10 @@ def render_period_summary(period):
         html.p(f"Offene Records: {open_records} von {total_records}"),
         html.p(f"Durchschnittlicher Erfüllungsgrad: {decimal_display(avg_fulfillment)}%"),
         html.p(
-            f"Gesamt Aufwand Plan/Ist: {decimal_display(total_plan_effort)} / {decimal_display(total_actual_effort)} PT"
+            f"Gesamt Aufwand Plan/Ist: {rounded_int_display(total_plan_effort)} / {rounded_int_display(total_actual_effort)} PT"
         ),
         html.p(
-            f"Gesamt Kosten Plan/Ist: {decimal_display(total_plan_cost)} / {decimal_display(total_actual_cost)} CHF"
+            f"Gesamt Kosten Plan/Ist: {rounded_int_with_separator_display(total_plan_cost)} / {rounded_int_with_separator_display(total_actual_cost)} CHF"
         ),
     ]
 

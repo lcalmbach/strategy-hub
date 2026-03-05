@@ -22,6 +22,12 @@ class ControllingRecordStatus(models.TextChoices):
     COMPLETED = "completed", "Abgeschlossen"
 
 
+class AmpelStatus(models.TextChoices):
+    GREEN = "green", "Grün"
+    YELLOW = "yellow", "Gelb"
+    RED = "red", "Rot"
+
+
 class ControllingPeriod(TimestampedModel, UserStampedModel):
     strategy = models.ForeignKey(
         "strategies.Strategy",
@@ -83,6 +89,27 @@ class ControllingRecord(TimestampedModel, UserStampedModel):
         choices=ControllingRecordStatus.choices,
         default=ControllingRecordStatus.OPEN,
     )
+    umsetzung_status_manual = models.CharField(
+        "Ampel Umsetzungsstand (manuell)",
+        max_length=10,
+        choices=AmpelStatus.choices,
+        blank=True,
+        default="",
+    )
+    kosten_status_manual = models.CharField(
+        "Ampel Ausgaben (manuell)",
+        max_length=10,
+        choices=AmpelStatus.choices,
+        blank=True,
+        default="",
+    )
+    aufwand_status_manual = models.CharField(
+        "Ampel Aufwand (manuell)",
+        max_length=10,
+        choices=AmpelStatus.choices,
+        blank=True,
+        default="",
+    )
     plan_result_description = models.TextField("Plan-Ergebnis", blank=True)
     plan_effort_person_days = models.DecimalField(
         "Plan-Aufwand Personentage",
@@ -136,6 +163,52 @@ class ControllingRecord(TimestampedModel, UserStampedModel):
     @property
     def effort_delta_days(self) -> Decimal:
         return self.actual_effort_person_days - self.plan_effort_person_days
+
+    @staticmethod
+    def _ratio_based_status(plan_value: Decimal, actual_value: Decimal) -> str:
+        if plan_value == 0 and actual_value == 0:
+            return ""
+        if plan_value == actual_value:
+            return AmpelStatus.GREEN
+        if plan_value == 0 or actual_value == 0:
+            return AmpelStatus.RED
+
+        larger = max(plan_value, actual_value)
+        smaller = min(plan_value, actual_value)
+        ratio = larger / smaller
+        if ratio < 2:
+            return AmpelStatus.YELLOW
+        return AmpelStatus.RED
+
+    @property
+    def umsetzung_status_calculated(self) -> str:
+        if self.actual_fulfillment_percent == 0:
+            return ""
+        if self.actual_fulfillment_percent == 100:
+            return AmpelStatus.GREEN
+        if self.actual_fulfillment_percent >= 50:
+            return AmpelStatus.YELLOW
+        return AmpelStatus.RED
+
+    @property
+    def kosten_status_calculated(self) -> str:
+        return self._ratio_based_status(self.plan_cost_chf, self.actual_cost_chf)
+
+    @property
+    def aufwand_status_calculated(self) -> str:
+        return self._ratio_based_status(self.plan_effort_person_days, self.actual_effort_person_days)
+
+    @property
+    def umsetzung_status_effective(self) -> str:
+        return self.umsetzung_status_manual or self.umsetzung_status_calculated
+
+    @property
+    def kosten_status_effective(self) -> str:
+        return self.kosten_status_manual or self.kosten_status_calculated
+
+    @property
+    def aufwand_status_effective(self) -> str:
+        return self.aufwand_status_manual or self.aufwand_status_calculated
 
     def __str__(self) -> str:
         return f"{self.measure} - {self.period}"

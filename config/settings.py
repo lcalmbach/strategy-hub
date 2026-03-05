@@ -246,6 +246,7 @@ if find_spec("whitenoise") is not None:
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 IOMMI_DEFAULT_STYLE = "bootstrap5"
 IOMMI_MAIN_MENU = "config.menu.main_menu"
+IOMMI_DEBUG = env_bool("IOMMI_DEBUG", False)
 
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
