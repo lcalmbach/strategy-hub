@@ -416,7 +416,11 @@ def render_people_summary_table(period):
 def render_period_summary(period):
     records = list(period.records.all())
     total_records = len(records)
-    open_records = sum(1 for record in records if record.status == ControllingRecordStatus.OPEN)
+    open_records = sum(
+        1
+        for record in records
+        if record.status_id and record.status.code == ControllingRecordStatus.OPEN
+    )
     avg_fulfillment = (
         sum(record.actual_fulfillment_percent for record in records) / total_records if total_records else Decimal("0.00")
     )
@@ -427,7 +431,8 @@ def render_period_summary(period):
 
     status_counts = {}
     for record in records:
-        status_counts[record.get_status_display()] = status_counts.get(record.get_status_display(), 0) + 1
+        status_label = record.status.name if record.status_id else "Ohne Status"
+        status_counts[status_label] = status_counts.get(status_label, 0) + 1
     status_summary = ", ".join(f"{label}: {count}" for label, count in status_counts.items()) or "Keine Records"
 
     ampel_counts = {"gruen": 0, "orange": 0, "rot": 0}

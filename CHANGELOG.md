@@ -4,6 +4,24 @@ All notable changes to this project should be documented in this file.
 
 The format is based on Keep a Changelog, and the project uses Semantic Versioning.
 
+## [0.4.0] - 2026-03-06
+
+### Added
+
+- Button in der Controlling-Perioden-Detailansicht zum Erzeugen fehlender Controlling-Records pro Massnahme
+- Toast-Meldungen im Hauptlayout fuer Benutzer-Feedback bei Aktionen
+- Hilfeseite unter `/hilfe/` mit Markdown-Inhalt aus `docs/HILFE.md`
+- Inhaltsverzeichnis in der Hilfeseite auf Basis der Markdown-Ueberschriften
+- Neue Felder auf Controlling-Perioden: Erinnerungsmail aktiv, Tage vor Termin, Mailtext Einladung Planung, Mailtext Einladung Controlling
+
+### Changed
+
+- Controlling-Record-Status von statischen Choices auf DB-Codes (`core.Code`, Kategorie-ID `1`) umgestellt
+- Status-Codes fuer Controlling-Records eingefuehrt: `Offen`, `Planung laeuft`, `Planung abgeschlossen`, `Controlling laeuft`, `Controlling abgeschlossen`
+- Controlling-Periodenliste: Spalten `Beginn`, `Ende`, zusaetzlich `Planung Ende` und `Controlling Ende`
+- Controlling-Periodenliste zeigt lange Mailtext-Felder nicht mehr
+- Hauptmenue ueberarbeitet: Hilfe als letzter Punkt mit visueller Abtrennung und Emoji-Labels
+
 ## [0.3.0] - 2026-03-05
 
 ### Added
