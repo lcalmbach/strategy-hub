@@ -15,11 +15,11 @@ class ControllingPeriodStatus(models.TextChoices):
 
 
 class ControllingRecordStatus(models.TextChoices):
-    OPEN = "open", "Offen"
-    PLANNING_IN_PROGRESS = "planning_in_progress", "Planung läuft"
-    PLANNING_IN_COMPLETED = "planning_completed", "Planung abgeschlossen"
-    READY_FOR_ACTUALS = "ready_for_actuals", "Bereit für Ist-Erfassung"
-    COMPLETED = "completed", "Abgeschlossen"
+    OPEN = "Offen", "Offen"
+    PLANNING_IN_PROGRESS = "Planung läuft", "Planung läuft"
+    PLANNING_COMPLETED = "Planung abgeschlossen", "Planung abgeschlossen"
+    CONTROLLING_IN_PROGRESS = "Controlling läuft", "Controlling läuft"
+    CONTROLLING_COMPLETED = "Controlling abgeschlossen", "Controlling abgeschlossen"
 
 
 class AmpelStatus(models.TextChoices):
@@ -40,6 +40,14 @@ class ControllingPeriod(TimestampedModel, UserStampedModel):
     end_date = models.DateField("Enddatum")
     planning_deadline = models.DateField("Planungsdeadline", null=True, blank=True)
     controlling_deadline = models.DateField("Controlling-Deadline", null=True, blank=True)
+    reminder_mail_enabled = models.BooleanField("Erinnerungsmail aktiv", default=False)
+    reminder_days_before_deadline = models.PositiveSmallIntegerField(
+        "Tage Mail vor Termin",
+        null=True,
+        blank=True,
+    )
+    invitation_planning_mail_text = models.TextField("Mailtext Einladung Planung", blank=True)
+    invitation_controlling_mail_text = models.TextField("Mailtext Einladung Controlling", blank=True)
     status = models.CharField(
         "Status",
         max_length=30,
@@ -63,6 +71,8 @@ class ControllingPeriod(TimestampedModel, UserStampedModel):
             errors["planning_deadline"] = "Planungsdeadline darf nicht vor Periodenstart liegen."
         if self.controlling_deadline and self.controlling_deadline < self.start_date:
             errors["controlling_deadline"] = "Controlling-Deadline darf nicht vor Periodenstart liegen."
+        if self.reminder_mail_enabled and self.reminder_days_before_deadline is None:
+            errors["reminder_days_before_deadline"] = "Bitte Anzahl Tage für Erinnerungsmail erfassen."
         if errors:
             raise ValidationError(errors)
 
@@ -83,11 +93,12 @@ class ControllingRecord(TimestampedModel, UserStampedModel):
         on_delete=models.CASCADE,
         related_name="controlling_records",
     )
-    status = models.CharField(
-        "Status",
-        max_length=30,
-        choices=ControllingRecordStatus.choices,
-        default=ControllingRecordStatus.OPEN,
+    status = models.ForeignKey(
+        "core.Code",
+        on_delete=models.PROTECT,
+        verbose_name="Status",
+        related_name="controlling_records",
+        limit_choices_to={"category_id": 1},
     )
     umsetzung_status_manual = models.CharField(
         "Ampel Umsetzungsstand (manuell)",
@@ -151,6 +162,8 @@ class ControllingRecord(TimestampedModel, UserStampedModel):
             errors["measure"] = "Controlling-Records dürfen nur Massnahmen referenzieren."
         if self.period_id and self.measure_id and self.period.strategy_id != self.measure.strategy_id:
             errors["period"] = "Periode und Massnahme müssen zur gleichen Strategie gehören."
+        if self.status_id and self.status.category_id != 1:
+            errors["status"] = "Status muss aus der Kategorie mit ID 1 stammen."
         if self.actual_fulfillment_percent < 0 or self.actual_fulfillment_percent > 100:
             errors["actual_fulfillment_percent"] = "Erfüllungsgrad muss zwischen 0 und 100 liegen."
         if errors:

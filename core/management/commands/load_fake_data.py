@@ -8,10 +8,12 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from core.models import Code
 from controlling.models import (
     ControllingPeriod,
     ControllingRecord,
     ControllingRecordResponsibility,
+    ControllingRecordStatus,
 )
 from people.models import Function, Person
 from strategies.models import (
@@ -371,15 +373,26 @@ class Command(BaseCommand):
         return periods
 
     def _load_controlling_records(self, periods, levels):
+        status_mapping = {
+            "open": ControllingRecordStatus.OPEN,
+            "planning_in_progress": ControllingRecordStatus.PLANNING_IN_PROGRESS,
+            "planning_completed": ControllingRecordStatus.PLANNING_COMPLETED,
+            "ready_for_actuals": ControllingRecordStatus.CONTROLLING_IN_PROGRESS,
+            "controlling_in_progress": ControllingRecordStatus.CONTROLLING_IN_PROGRESS,
+            "completed": ControllingRecordStatus.CONTROLLING_COMPLETED,
+            "controlling_completed": ControllingRecordStatus.CONTROLLING_COMPLETED,
+        }
         records = {}
         for row in read_csv("controlling_records.csv"):
             period = periods[(row["strategy_title"], row["period_name"])]
             measure = levels[(row["strategy_title"], row["measure_short_code"])]
+            mapped_status = status_mapping.get(row["status"], row["status"])
+            status_code = Code.objects.get(category_id=1, code=mapped_status)
             record, _ = ControllingRecord.objects.update_or_create(
                 period=period,
                 measure=measure,
                 defaults={
-                    "status": row["status"],
+                    "status": status_code,
                     "plan_result_description": row["plan_result_description"],
                     "plan_effort_person_days": as_decimal(row["plan_effort_person_days"]),
                     "plan_effort_description": row["plan_effort_description"],

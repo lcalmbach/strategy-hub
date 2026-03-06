@@ -1,12 +1,16 @@
 from decimal import Decimal
+from pathlib import Path
+import re
 
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.db.models import Count, Sum
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
+from django.utils.text import slugify
 from django.utils.safestring import mark_safe
-from django.utils.html import format_html, format_html_join
+from django.utils.html import escape, format_html, format_html_join
 from django.views.decorators.http import require_POST
 
 from iommi import Page, html
@@ -16,6 +20,14 @@ from plotly.offline import plot
 from controlling.models import ControllingPeriod, ControllingRecordStatus
 from core.strategy_context import get_active_strategy, require_active_strategy, select_active_strategy
 from strategies.models import ResponsibilityRole, StrategyLevel, StrategyLevelType
+
+try:
+    import markdown as markdown_lib
+except ImportError:  # pragma: no cover - optional dependency
+    markdown_lib = None
+
+
+HELP_FILE_PATH = Path(settings.BASE_DIR) / "docs" / "HILFE.md"
 
 
 def decimal_display(value):
@@ -29,6 +41,89 @@ def rounded_int_display(value):
 def rounded_int_with_separator_display(value):
     number = int((value or Decimal("0.00")).quantize(Decimal("1")))
     return f"{number:,}".replace(",", "'")
+
+
+def render_markdown_content(content: str) -> str:
+    if markdown_lib is not None:
+        md = markdown_lib.Markdown(extensions=["extra", "sane_lists", "toc"])
+        body_html = md.convert(content)
+        if md.toc:
+            toc_html = f"<h2>Inhaltsverzeichnis</h2>{md.toc}"
+            return f"{toc_html}{body_html}"
+        return body_html
+
+    def inline_format(text: str) -> str:
+        escaped = escape(text)
+        escaped = re.sub(r"`([^`]+)`", r"<code>\1</code>", escaped)
+        escaped = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", escaped)
+        escaped = re.sub(r"\*([^*]+)\*", r"<em>\1</em>", escaped)
+        return escaped
+
+    toc_items = []
+    html_parts = []
+    in_list = False
+
+    for raw_line in content.splitlines():
+        line = raw_line.rstrip()
+        stripped = line.strip()
+
+        if not stripped:
+            if in_list:
+                html_parts.append("</ul>")
+                in_list = False
+            continue
+
+        if stripped.startswith("# "):
+            if in_list:
+                html_parts.append("</ul>")
+                in_list = False
+            heading_text = stripped[2:].strip()
+            heading_id = slugify(heading_text, allow_unicode=True)
+            toc_items.append((heading_id, heading_text))
+            html_parts.append(f'<h1 id="{heading_id}">{inline_format(heading_text)}</h1>')
+            continue
+        if stripped.startswith("## "):
+            if in_list:
+                html_parts.append("</ul>")
+                in_list = False
+            heading_text = stripped[3:].strip()
+            heading_id = slugify(heading_text, allow_unicode=True)
+            toc_items.append((heading_id, heading_text))
+            html_parts.append(f'<h2 id="{heading_id}">{inline_format(heading_text)}</h2>')
+            continue
+        if stripped.startswith("### "):
+            if in_list:
+                html_parts.append("</ul>")
+                in_list = False
+            heading_text = stripped[4:].strip()
+            heading_id = slugify(heading_text, allow_unicode=True)
+            toc_items.append((heading_id, heading_text))
+            html_parts.append(f'<h3 id="{heading_id}">{inline_format(heading_text)}</h3>')
+            continue
+
+        if stripped.startswith("- "):
+            if not in_list:
+                html_parts.append("<ul>")
+                in_list = True
+            html_parts.append(f"<li>{inline_format(stripped[2:])}</li>")
+            continue
+
+        if in_list:
+            html_parts.append("</ul>")
+            in_list = False
+        html_parts.append(f"<p>{inline_format(stripped)}</p>")
+
+    if in_list:
+        html_parts.append("</ul>")
+
+    if not toc_items:
+        return "\n".join(html_parts)
+
+    toc_html = ["<h2>Inhaltsverzeichnis</h2>", "<ul>"]
+    for heading_id, heading_text in toc_items:
+        toc_html.append(f'<li><a href="#{heading_id}">{inline_format(heading_text)}</a></li>')
+    toc_html.append("</ul>")
+    return "\n".join(toc_html + html_parts)
 
 
 def ampel_bucket(record):
@@ -448,6 +543,22 @@ def profile_page(request):
                 if active_strategy
                 else "Aktive Strategie: keine ausgewählt"
             ),
+        ),
+    )
+    return page.as_view()(request)
+
+
+@login_required
+def help_page(request):
+    if HELP_FILE_PATH.exists():
+        markdown_content = HELP_FILE_PATH.read_text(encoding="utf-8")
+    else:
+        markdown_content = "# Hilfe\n\nDie Hilfedatei wurde nicht gefunden."
+
+    page = Page(
+        title="Hilfe",
+        parts__content=html.div(
+            mark_safe(render_markdown_content(markdown_content)),
         ),
     )
     return page.as_view()(request)

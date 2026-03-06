@@ -5,13 +5,14 @@ from django.urls import include, path
 
 from iommi.views import auth_views
 
-from dashboard.views import dashboard_home, logout_view, profile_page, select_strategy
+from dashboard.views import dashboard_home, help_page, logout_view, profile_page, select_strategy
 from strategies.views import strategy_card_list
 
 
 urlpatterns = [
     path("", strategy_card_list, name="home"),
     path("dashboard/", dashboard_home, name="dashboard"),
+    path("hilfe/", help_page, name="help"),
     path("accounts/logout/", logout_view, name="logout"),
     path("accounts/profile/", profile_page, name="profile"),
     path("select-strategy/<int:strategy_id>/", select_strategy, name="select-strategy"),

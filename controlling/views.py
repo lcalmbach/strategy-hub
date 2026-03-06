@@ -3,12 +3,14 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect
 from django.utils.html import format_html
-from iommi import Column
+from iommi import Action, Column
 
 from core.iommi import icon_delete_column, icon_edit_column, login_required_crud_paths
+from core.models import Code
 from core.strategy_context import get_active_strategy, require_active_strategy
 from strategies.models import ResponsibilityRole, StrategyLevel, StrategyLevelType
 from .models import AmpelStatus, ControllingPeriod, ControllingRecord, ControllingRecordResponsibility, ControllingRecordStatus
+from .services import open_period
 
 
 AUDIT_FIELDS = ["created_at", "updated_at", "created_by", "updated_by"]
@@ -48,16 +50,36 @@ ACTUAL_FIELDS = {
 
 
 def current_record_status(request=None, form=None, **_):
+    def normalize_status(raw_value):
+        if not raw_value:
+            return ""
+        if hasattr(raw_value, "code"):
+            return raw_value.code
+        raw_value = str(raw_value)
+        known_codes = {
+            ControllingRecordStatus.OPEN,
+            ControllingRecordStatus.PLANNING_IN_PROGRESS,
+            ControllingRecordStatus.PLANNING_COMPLETED,
+            ControllingRecordStatus.CONTROLLING_IN_PROGRESS,
+            ControllingRecordStatus.CONTROLLING_COMPLETED,
+        }
+        if raw_value in known_codes:
+            return raw_value
+        if raw_value.isdigit():
+            code = Code.objects.filter(pk=int(raw_value), category_id=1).only("code").first()
+            return code.code if code else raw_value
+        return raw_value
+
     if request is not None:
-        posted_status = request.POST.get("status")
+        posted_status = normalize_status(request.POST.get("status"))
         if posted_status:
             return posted_status
-        query_status = request.GET.get("status")
+        query_status = normalize_status(request.GET.get("status"))
         if query_status:
             return query_status
 
     if form is not None and getattr(form, "instance", None) is not None:
-        return form.instance.status
+        return normalize_status(form.instance.status)
     return ControllingRecordStatus.OPEN
 
 
@@ -65,9 +87,9 @@ def include_record_field(field_name: str, request=None, form=None, **_):
     status = current_record_status(request=request, form=form)
     if status == ControllingRecordStatus.PLANNING_IN_PROGRESS:
         return field_name in PLAN_FIELDS
-    if status == ControllingRecordStatus.READY_FOR_ACTUALS:
+    if status == ControllingRecordStatus.CONTROLLING_IN_PROGRESS:
         return field_name in ACTUAL_FIELDS
-    if status == ControllingRecordStatus.COMPLETED:
+    if status == ControllingRecordStatus.CONTROLLING_COMPLETED:
         return True
     return True
 
@@ -178,6 +200,29 @@ def delete_controlling_record_direct(request, pk):
     return redirect("/controlling/records/")
 
 
+@login_required
+@require_active_strategy
+def create_missing_records_for_period(request, pk):
+    period = get_object_or_404(
+        ControllingPeriod,
+        pk=pk,
+        strategy_id=active_strategy_id(request),
+    )
+    created_records, existing_count = open_period(period, created_by=request.user)
+    created_count = len(created_records)
+    if created_count:
+        messages.success(
+            request,
+            (
+                f"{created_count} fehlende Records für '{period.name}' erstellt "
+                f"(bereits vorhanden: {existing_count})."
+            ),
+        )
+    else:
+        messages.info(request, f"Keine fehlenden Records gefunden für '{period.name}'.")
+    return redirect(f"/controlling/periods/{period.pk}/")
+
+
 period_crud = login_required_crud_paths(
     model=ControllingPeriod,
     require_strategy=True,
@@ -186,6 +231,14 @@ period_crud = login_required_crud_paths(
     table__columns__name__include=True,
     table__columns__start_date__include=True,
     table__columns__end_date__include=True,
+    table__columns__start_date__display_name="Beginn",
+    table__columns__end_date__display_name="Ende",
+    table__columns__planning_deadline__include=True,
+    table__columns__planning_deadline__display_name="Planung Ende",
+    table__columns__planning_deadline__after="end_date",
+    table__columns__controlling_deadline__include=True,
+    table__columns__controlling_deadline__display_name="Controlling Ende",
+    table__columns__controlling_deadline__after="planning_deadline",
     table__rows=lambda request, **_: ControllingPeriod.objects.filter(
         strategy_id=active_strategy_id(request)
     ).select_related("strategy"),
@@ -193,9 +246,9 @@ period_crud = login_required_crud_paths(
     table__columns__status__filter__include=True,
     table__columns__id__include=False,
     table__columns__strategy__include=False,
-    table__columns__planning_deadline__include=False,
-    table__columns__controlling_deadline__include=False,
     table__columns__status__include=False,
+    table__columns__invitation_planning_mail_text__include=False,
+    table__columns__invitation_controlling_mail_text__include=False,
     table__columns__created_at__include=False,
     table__columns__updated_at__include=False,
     table__columns__created_by__include=False,
@@ -221,6 +274,11 @@ period_crud = login_required_crud_paths(
         strategy_id=active_strategy_id(request),
     ),
     detail__fields__strategy__include=False,
+    detail__actions__generate_missing_records=Action(
+        display_name="Fehlende Controlling Records 🚀",
+        attrs__href=lambda form, **_: f"/controlling/periods/{form.instance.pk}/generate-missing-records/",
+        attrs__class__primary_action=True,
+    ),
     delete__title=lambda form, **_: f"Periode löschen: {form.instance.name}",
     delete__instance=lambda params, request, **_: ControllingPeriod.objects.get(
         pk=params.pk,
@@ -260,6 +318,7 @@ record_crud = login_required_crud_paths(
     table__columns__period__display_name="Planungsperiode",
     table__columns__period__include=True,
     table__columns__status__include=True,
+    table__columns__status__cell__value=lambda row, **_: row.status.name if row.status_id else "",
     table__columns__umsetzung=Column(
         display_name="Umsetzung",
         after="status",

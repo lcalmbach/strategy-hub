@@ -1,28 +1,38 @@
 from django.db import transaction
 
+from core.models import Code
 from strategies.models import MeasureResponsibility, StrategyLevel, StrategyLevelType
 
-from .models import ControllingRecord, ControllingRecordResponsibility
+from .models import ControllingRecord, ControllingRecordResponsibility, ControllingRecordStatus
+
+
+def get_controlling_status_code(status_code: str) -> Code:
+    return Code.objects.get(category_id=1, code=status_code)
 
 
 @transaction.atomic
 def open_period(period, *, created_by=None):
-    active_measures = (
+    measures = (
         StrategyLevel.objects.filter(
+            strategy_id=period.strategy_id,
             level=StrategyLevelType.MASSNAHME,
-            is_active=True,
-            strategy__is_active=True,
         )
         .select_related("strategy")
-        .prefetch_related("responsibilities")
+        .order_by("short_code", "pk")
     )
 
     created_records = []
-    for measure in active_measures:
+    existing_count = 0
+    default_status = get_controlling_status_code(ControllingRecordStatus.OPEN)
+    for measure in measures:
         record, created = ControllingRecord.objects.get_or_create(
             period=period,
             measure=measure,
-            defaults={"created_by": created_by, "updated_by": created_by},
+            defaults={
+                "status": default_status,
+                "created_by": created_by,
+                "updated_by": created_by,
+            },
         )
         if created:
             created_records.append(record)
@@ -39,4 +49,7 @@ def open_period(period, *, created_by=None):
                     for responsibility in responsibilities
                 ]
             )
-    return created_records
+        else:
+            existing_count += 1
+
+    return created_records, existing_count

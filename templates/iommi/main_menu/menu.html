@@ -2,6 +2,12 @@
 {% get_media_prefix as media_prefix %}
 {% block above %}{% endblock %}
 <style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
     body.sidebar_menu_active {
         margin-left: var(--iommi-menu-width);
     }
@@ -23,8 +29,8 @@
         justify-content: space-between;
         gap: 1rem;
         padding: 0.9rem 1.25rem;
-        background: rgba(255, 252, 247, 0.92);
-        border-bottom: 1px solid rgba(18, 49, 58, 0.12);
+        background: #2f5f73;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.18);
         backdrop-filter: blur(14px);
     }
 
@@ -39,12 +45,12 @@
         font-weight: 800;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        color: #12313a;
+        color: #ffffff;
     }
 
     .topbar-subtitle {
         font-size: 0.86rem;
-        color: rgba(18, 49, 58, 0.72);
+        color: rgba(255, 255, 255, 0.88);
     }
 
     .topbar-actions {
@@ -62,9 +68,9 @@
         align-items: center;
         gap: 0.7rem;
         padding: 0.45rem 0.7rem 0.45rem 0.45rem;
-        border: 1px solid rgba(18, 49, 58, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.3);
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.78);
+        background: rgba(255, 255, 255, 0.12);
         list-style: none;
         cursor: pointer;
     }
@@ -77,8 +83,8 @@
         content: "";
         width: 0.55rem;
         height: 0.55rem;
-        border-right: 2px solid rgba(18, 49, 58, 0.72);
-        border-bottom: 2px solid rgba(18, 49, 58, 0.72);
+        border-right: 2px solid rgba(255, 255, 255, 0.9);
+        border-bottom: 2px solid rgba(255, 255, 255, 0.9);
         transform: rotate(45deg) translateY(-1px);
     }
 
@@ -99,7 +105,7 @@
     .user-label {
         font-size: 0.92rem;
         font-weight: 700;
-        color: #12313a;
+        color: #ffffff;
     }
 
     .user-dropdown {
@@ -212,6 +218,18 @@
 
     .main_menu a {
         color: var(--iommi-menu-text-color-color);
+        font-family: "Manrope", "Segoe UI", "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    }
+
+    .main_menu a span {
+        font-family: "Manrope", "Segoe UI", "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    }
+
+    .main_menu li.menu_help_separator,
+    .main_menu a.menu_help_separator {
+        border-top: 1px solid rgba(18, 49, 58, 0.18);
+        margin-top: 0.45rem;
+        padding-top: 0.45rem;
     }
 
     .main_menu li.is_active > details > summary > a,
@@ -255,6 +273,48 @@
         color: #fff !important;
     }
 
+    .toast-stack {
+        position: fixed;
+        top: 0.9rem;
+        right: 1rem;
+        z-index: 1200;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        max-width: min(92vw, 420px);
+    }
+
+    .toast-message {
+        border-radius: 12px;
+        padding: 0.75rem 0.9rem;
+        color: #ffffff;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+        backdrop-filter: blur(6px);
+        opacity: 1;
+        transition: opacity 200ms ease, transform 200ms ease;
+    }
+
+    .toast-message.success {
+        background: rgba(21, 128, 61, 0.94);
+    }
+
+    .toast-message.info {
+        background: rgba(8, 47, 73, 0.94);
+    }
+
+    .toast-message.warning {
+        background: rgba(161, 98, 7, 0.96);
+    }
+
+    .toast-message.error {
+        background: rgba(153, 27, 27, 0.96);
+    }
+
+    .toast-message.fade-out {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
     .iommi-table-container [class*="links"] {
         display: flex;
         justify-content: flex-end;
@@ -271,10 +331,39 @@
             padding-left: 1rem;
             padding-right: 1rem;
         }
+
+        .toast-stack {
+            right: 0.75rem;
+            left: 0.75rem;
+            max-width: none;
+        }
     }
 </style>
 
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const toasts = document.querySelectorAll(".toast-message");
+        toasts.forEach((toast, index) => {
+            const delay = 3000 + index * 200;
+            window.setTimeout(() => {
+                toast.classList.add("fade-out");
+                window.setTimeout(() => {
+                    toast.remove();
+                }, 220);
+            }, delay);
+        });
+    });
+</script>
+
 <div class="app-shell">
+    {% if messages %}
+        <div class="toast-stack" aria-live="polite" aria-atomic="true">
+            {% for message in messages %}
+                <div class="toast-message {{ message.tags|default:'info' }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     <header class="topbar">
         <div class="topbar-brand">
             <span class="topbar-title">StatA Strategy Hub</span>

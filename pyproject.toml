@@ -7,6 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "Django>=5.1,<5.3",
     "iommi>=7.18",
+    "Markdown>=3.8",
     "plotly>=6.0",
     "psycopg[binary]>=3.2",
     "Pillow>=11.0",
