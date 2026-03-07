@@ -39,6 +39,26 @@
             gap: 6px;
             margin-bottom: 16px;
         }
+        .label-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .field-tooltip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1rem;
+            height: 1rem;
+            border-radius: 999px;
+            border: 1px solid #9fb4c0;
+            color: #375a6b;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: help;
+            user-select: none;
+            background: #f4f9fb;
+        }
         .field input,
         .field select,
         .field textarea {
@@ -76,7 +96,7 @@
         }
         .button-primary,
         button {
-            background: #14532d;
+            background: #2f5f73;
             color: #fff;
         }
         .button-secondary {
@@ -125,8 +145,13 @@
 
                 <div class="grid">
                     {% for field in form %}
-                        <div class="field{% if field.name == 'description' %} field-wide{% endif %}">
-                            {{ field.label_tag }}
+                        <div class="field{% if field.name == 'description' or field.name == 'implementation_description' %} field-wide{% endif %}">
+                            <div class="label-row">
+                                {{ field.label_tag }}
+                                {% if field.help_text %}
+                                    <span class="field-tooltip" title="{{ field.help_text }}">ⓘ</span>
+                                {% endif %}
+                            </div>
                             {{ field }}
                             {% if field.errors %}
                                 <ul class="errors">

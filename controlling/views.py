@@ -25,6 +25,25 @@ def active_strategy_id(request):
     return strategy.pk if strategy else None
 
 
+def period_filter_choices(request, **_):
+    queryset = ControllingPeriod.objects.filter(
+        strategy_id=active_strategy_id(request)
+    )
+
+    selected_ids = []
+    for key in ("period", "query/period"):
+        for raw_value in request.GET.getlist(key):
+            for part in raw_value.split(","):
+                part = part.strip()
+                if part.isdigit():
+                    selected_ids.append(int(part))
+
+    if selected_ids:
+        queryset = (ControllingPeriod.objects.filter(pk__in=selected_ids) | queryset).distinct()
+
+    return queryset.order_by("-start_date", "name")
+
+
 def create_controlling_period_instance(request, **_):
     return ControllingPeriod(strategy=active_strategy(request))
 
@@ -35,6 +54,7 @@ PLAN_FIELDS = {
     "plan_effort_description",
     "plan_cost_chf",
     "plan_cost_description",
+    "remarks_planning",
 }
 ACTUAL_FIELDS = {
     "actual_fulfillment_percent",
@@ -43,6 +63,8 @@ ACTUAL_FIELDS = {
     "actual_effort_description",
     "actual_cost_chf",
     "actual_cost_description",
+    "remarks_controlling",
+    "ampel_allgemein",
     "umsetzung_status_manual",
     "kosten_status_manual",
     "aufwand_status_manual",
@@ -290,7 +312,7 @@ period_crud = login_required_crud_paths(
 record_crud = login_required_crud_paths(
     model=ControllingRecord,
     require_strategy=True,
-    table__title="Controlling-Records",
+    table__title="Controlling",
     table__page_size=25,
     table__rows=lambda request, **_: ControllingRecord.objects.filter(
         measure__strategy_id=active_strategy_id(request)
@@ -338,6 +360,7 @@ record_crud = login_required_crud_paths(
         sortable=False,
     ),
     table__columns__period__filter__include=True,
+    table__columns__period__filter__choices=period_filter_choices,
     table__columns__measure__filter__include=True,
     table__columns__measure__filter__choices=lambda request, **_: StrategyLevel.objects.filter(
         strategy_id=active_strategy_id(request),
@@ -360,6 +383,9 @@ record_crud = login_required_crud_paths(
     table__columns__actual_effort_description__include=False,
     table__columns__actual_cost_chf__include=False,
     table__columns__actual_cost_description__include=False,
+    table__columns__remarks_planning__include=False,
+    table__columns__remarks_controlling__include=False,
+    table__columns__ampel_allgemein__include=False,
     table__columns__created_at__include=False,
     table__columns__updated_at__include=False,
     table__columns__created_by__include=False,
@@ -378,15 +404,23 @@ record_crud = login_required_crud_paths(
     create__fields__plan_effort_description__include=record_field_include("plan_effort_description"),
     create__fields__plan_cost_chf__include=record_field_include("plan_cost_chf"),
     create__fields__plan_cost_description__include=record_field_include("plan_cost_description"),
+    create__fields__remarks_planning__include=record_field_include("remarks_planning"),
+    create__fields__remarks_planning__display_name="Bemerkungen zur Planung",
     create__fields__actual_fulfillment_percent__include=record_field_include("actual_fulfillment_percent"),
     create__fields__actual_result_description__include=record_field_include("actual_result_description"),
     create__fields__actual_effort_person_days__include=record_field_include("actual_effort_person_days"),
     create__fields__actual_effort_description__include=record_field_include("actual_effort_description"),
     create__fields__actual_cost_chf__include=record_field_include("actual_cost_chf"),
     create__fields__actual_cost_description__include=record_field_include("actual_cost_description"),
+    create__fields__remarks_controlling__include=record_field_include("remarks_controlling"),
+    create__fields__remarks_controlling__display_name="Bemerkungen zum Controlling",
+    create__fields__ampel_allgemein__include=record_field_include("ampel_allgemein"),
     create__fields__umsetzung_status_manual__include=record_field_include("umsetzung_status_manual"),
+    create__fields__umsetzung_status_manual__display_name="Ampel Umsetzungsstand",
     create__fields__kosten_status_manual__include=record_field_include("kosten_status_manual"),
+    create__fields__kosten_status_manual__display_name="Ampel Ausgaben",
     create__fields__aufwand_status_manual__include=record_field_include("aufwand_status_manual"),
+    create__fields__aufwand_status_manual__display_name="Ampel Aufwand",
     edit__title="Controlling-Record bearbeiten",
     edit__auto__exclude=AUDIT_FIELDS,
     edit__instance=lambda params, request, **_: ControllingRecord.objects.get(
@@ -402,17 +436,28 @@ record_crud = login_required_crud_paths(
     edit__fields__plan_effort_description__include=record_field_include("plan_effort_description"),
     edit__fields__plan_cost_chf__include=record_field_include("plan_cost_chf"),
     edit__fields__plan_cost_description__include=record_field_include("plan_cost_description"),
+    edit__fields__remarks_planning__include=record_field_include("remarks_planning"),
+    edit__fields__remarks_planning__display_name="Bemerkungen zur Planung",
+    edit__fields__remarks_planning__after="plan_cost_description",
     edit__fields__actual_fulfillment_percent__include=record_field_include("actual_fulfillment_percent"),
     edit__fields__actual_result_description__include=record_field_include("actual_result_description"),
     edit__fields__actual_effort_person_days__include=record_field_include("actual_effort_person_days"),
     edit__fields__actual_effort_description__include=record_field_include("actual_effort_description"),
     edit__fields__actual_cost_chf__include=record_field_include("actual_cost_chf"),
     edit__fields__actual_cost_description__include=record_field_include("actual_cost_description"),
+    edit__fields__remarks_controlling__include=record_field_include("remarks_controlling"),
+    edit__fields__remarks_controlling__display_name="Bemerkungen zum Controlling",
+    edit__fields__remarks_controlling__after="actual_cost_description",
+    edit__fields__ampel_allgemein__include=record_field_include("ampel_allgemein"),
+    edit__fields__ampel_allgemein__after="remarks_controlling",
     edit__fields__umsetzung_status_manual__include=record_field_include("umsetzung_status_manual"),
-    edit__fields__umsetzung_status_manual__after="actual_cost_description",
+    edit__fields__umsetzung_status_manual__display_name="Ampel Umsetzungsstand",
+    edit__fields__umsetzung_status_manual__after="ampel_allgemein",
     edit__fields__kosten_status_manual__include=record_field_include("kosten_status_manual"),
+    edit__fields__kosten_status_manual__display_name="Ampel Ausgaben",
     edit__fields__kosten_status_manual__after="umsetzung_status_manual",
     edit__fields__aufwand_status_manual__include=record_field_include("aufwand_status_manual"),
+    edit__fields__aufwand_status_manual__display_name="Ampel Aufwand",
     edit__fields__aufwand_status_manual__after="kosten_status_manual",
     detail__title=lambda form, **_: str(form.instance),
     detail__auto__exclude=AUDIT_FIELDS,
@@ -429,15 +474,23 @@ record_crud = login_required_crud_paths(
     detail__fields__plan_effort_description__include=record_field_include("plan_effort_description"),
     detail__fields__plan_cost_chf__include=record_field_include("plan_cost_chf"),
     detail__fields__plan_cost_description__include=record_field_include("plan_cost_description"),
+    detail__fields__remarks_planning__include=record_field_include("remarks_planning"),
+    detail__fields__remarks_planning__display_name="Bemerkungen zur Planung",
     detail__fields__actual_fulfillment_percent__include=record_field_include("actual_fulfillment_percent"),
     detail__fields__actual_result_description__include=record_field_include("actual_result_description"),
     detail__fields__actual_effort_person_days__include=record_field_include("actual_effort_person_days"),
     detail__fields__actual_effort_description__include=record_field_include("actual_effort_description"),
     detail__fields__actual_cost_chf__include=record_field_include("actual_cost_chf"),
     detail__fields__actual_cost_description__include=record_field_include("actual_cost_description"),
+    detail__fields__remarks_controlling__include=record_field_include("remarks_controlling"),
+    detail__fields__remarks_controlling__display_name="Bemerkungen zum Controlling",
+    detail__fields__ampel_allgemein__include=record_field_include("ampel_allgemein"),
     detail__fields__umsetzung_status_manual__include=record_field_include("umsetzung_status_manual"),
+    detail__fields__umsetzung_status_manual__display_name="Ampel Umsetzungsstand",
     detail__fields__kosten_status_manual__include=record_field_include("kosten_status_manual"),
+    detail__fields__kosten_status_manual__display_name="Ampel Ausgaben",
     detail__fields__aufwand_status_manual__include=record_field_include("aufwand_status_manual"),
+    detail__fields__aufwand_status_manual__display_name="Ampel Aufwand",
     delete__title=lambda form, **_: f"Record löschen: {form.instance}",
     delete__instance=lambda params, request, **_: ControllingRecord.objects.get(
         pk=params.pk,

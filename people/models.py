@@ -19,6 +19,27 @@ class Function(TimestampedModel, UserStampedModel):
         return f"{self.code} {self.label}".strip()
 
 
+class Organization(TimestampedModel, UserStampedModel):
+    short_code = models.CharField("Kürzel", max_length=50, blank=True)
+    bereich = models.CharField("Bereich", max_length=255)
+    abteilung = models.CharField("Abteilung", max_length=255, blank=True)
+    sort_order = models.PositiveIntegerField("Sortierung", default=0)
+    is_active = models.BooleanField("Aktiv", default=True)
+
+    class Meta:
+        ordering = ["sort_order", "short_code", "bereich", "abteilung"]
+        verbose_name = "Organisation"
+        verbose_name_plural = "Organisationen"
+        constraints = [
+            models.UniqueConstraint(fields=["bereich", "abteilung"], name="uniq_organization_bereich_abteilung"),
+        ]
+
+    def __str__(self) -> str:
+        if self.abteilung:
+            return f"{self.bereich} - {self.abteilung}"
+        return self.bereich
+
+
 class Person(TimestampedModel, UserStampedModel):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, verbose_name="Benutzer", on_delete=models.CASCADE)
     short_code = models.CharField("Kürzel", max_length=50, unique=True)
@@ -28,7 +49,14 @@ class Person(TimestampedModel, UserStampedModel):
         on_delete=models.PROTECT,
         related_name="people",
     )
-    organizational_unit = models.CharField("Organisationseinheit", max_length=255, blank=True)
+    organization = models.ForeignKey(
+        Organization,
+        verbose_name="Organisation",
+        on_delete=models.PROTECT,
+        related_name="people",
+        null=True,
+        blank=True,
+    )
     is_active_profile = models.BooleanField("Aktiv", default=True)
 
     class Meta:

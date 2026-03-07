@@ -69,6 +69,11 @@ def login_required_crud_paths(
         editable=False,
         instance=lambda params, **_: model.objects.get(pk=params.pk),
         title=lambda form, **_: (form.model or form.instance)._meta.verbose_name,
+        actions__edit=Action(
+            display_name="Bearbeiten",
+            attrs__href="edit/",
+            attrs__class__primary_action=True,
+        ),
     )
     create = setdefaults_path(
         create,

@@ -1,0 +1,51 @@
+{% extends "iommi/form/form.html" %}
+
+{% block after_fields %}
+    {{ block.super }}
+
+    {% if form.instance.level == 'handlungsfeld' %}
+        <section style="margin-top: 1.25rem;">
+            <hr style="border: 0; border-top: 1px solid #d7e3eb; margin: 0 0 1rem;">
+            <h3 style="margin: 0 0 0.5rem;">Ziele</h3>
+            <ul style="margin: 0; padding-left: 1.1rem;">
+                {% for ziel in form.instance.children.all %}
+                    {% if ziel.level == 'ziel' %}
+                        <li><a href="/strategies/levels/{{ ziel.pk }}/">{{ ziel.display_label }}</a></li>
+                    {% endif %}
+                {% empty %}
+                    <li>Keine Ziele erfasst.</li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% elif form.instance.level == 'ziel' %}
+        <section style="margin-top: 1.25rem;">
+            <hr style="border: 0; border-top: 1px solid #d7e3eb; margin: 0 0 1rem;">
+            <h3 style="margin: 0 0 0.5rem;">Massnahmen</h3>
+            <ul style="margin: 0; padding-left: 1.1rem;">
+                {% for massnahme in form.instance.children.all %}
+                    {% if massnahme.level == 'massnahme' %}
+                        <li><a href="/strategies/levels/{{ massnahme.pk }}/">{{ massnahme.display_label }}</a></li>
+                    {% endif %}
+                {% empty %}
+                    <li>Keine Massnahmen erfasst.</li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% elif form.instance.level == 'massnahme' %}
+        <section style="margin-top: 1.25rem;">
+            <hr style="border: 0; border-top: 1px solid #d7e3eb; margin: 0 0 1rem;">
+            <h3 style="margin: 0 0 0.5rem;">Controlling-Records</h3>
+            <ul style="margin: 0; padding-left: 1.1rem;">
+                {% for record in form.instance.controlling_records.all %}
+                    <li>
+                        <a href="/controlling/records/{{ record.pk }}/">
+                            {{ record.period.name }} ({{ record.status.name }})
+                        </a>
+                    </li>
+                {% empty %}
+                    <li>Keine Controlling-Records erfasst.</li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+{% endblock %}

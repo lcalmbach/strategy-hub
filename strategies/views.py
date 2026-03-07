@@ -9,7 +9,7 @@ from iommi import Action, Column, LAST, Page, Table, html
 
 from core.iommi import icon_edit_column, login_required_crud_paths
 from core.strategy_context import get_active_strategy, require_active_strategy
-from .models import MeasureResponsibility, MeasureType, Strategy, StrategyLevel, StrategyLevelType
+from .models import MeasureResponsibility, MeasureType, Strategy, StrategyLevel, StrategyLevelType, StrategyStatus
 
 
 AUDIT_FIELDS = ["created_at", "updated_at", "created_by", "updated_by"]
@@ -89,6 +89,32 @@ def level_has_measure_schedule(request, params=None, **_):
     return current_strategy_level(request, params=params) == StrategyLevelType.MASSNAHME
 
 
+def detail_show_level_field(form=None, **_):
+    return bool(form and form.instance.level == StrategyLevelType.MASSNAHME)
+
+
+def detail_show_sort_order_field(form=None, **_):
+    return bool(form and form.instance.level == StrategyLevelType.MASSNAHME)
+
+
+def detail_show_parent_field(form=None, **_):
+    return bool(form and form.instance.level == StrategyLevelType.MASSNAHME)
+
+
+def parent_field_display_name(request=None, form=None, **_):
+    level = None
+    if form is not None and getattr(form, "instance", None) is not None:
+        level = form.instance.level
+    elif request is not None:
+        level = current_strategy_level(request)
+
+    if level == StrategyLevelType.ZIEL:
+        return "Handlungsfeld"
+    if level == StrategyLevelType.MASSNAHME:
+        return "Ziel"
+    return "Parent"
+
+
 def selected_parent_id(request):
     return request.GET.get("parent") or request.GET.get("query/parent")
 
@@ -165,19 +191,50 @@ def strategy_level_redirect_to(form, **_):
 
 
 class MassnahmeForm(ModelForm):
+    FIELD_TOOLTIPS = {
+        "short_code": "Eindeutiges Kürzel der Massnahme.",
+        "title": "Kurzbezeichnung der Massnahme.",
+        "description": "Inhaltliche Beschreibung der Massnahme.",
+        "implementation_description": "Konkrete Umsetzungsschritte und Vorgehen.",
+        "parent": "Übergeordnetes Ziel, dem die Massnahme zugeordnet ist.",
+        "measure_type": "Kategorie bzw. Typ der Massnahme.",
+        "start_date": "Geplanter Start der Umsetzung.",
+        "end_date": "Geplantes Ende der Umsetzung.",
+        "total_effort": "Gesamter geplanter Aufwand in Personentagen (PT).",
+        "total_cost": "Gesamte geplante Kosten in CHF.",
+        "status": "Aktueller Status der Massnahme.",
+        "sort_order": "Reihenfolge in Listenansichten (kleiner = weiter oben).",
+    }
+
     class Meta:
         model = StrategyLevel
         fields = [
             "short_code",
             "title",
             "description",
+            "implementation_description",
             "parent",
             "measure_type",
             "start_date",
             "end_date",
+            "total_effort",
+            "total_cost",
             "status",
             "sort_order",
         ]
+        labels = {
+            "total_effort": "Aufwand total (PT)",
+            "total_cost": "Kosten total (CHF)",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, tooltip in self.FIELD_TOOLTIPS.items():
+            field = self.fields.get(field_name)
+            if field is None:
+                continue
+            field.help_text = tooltip
+            field.widget.attrs["title"] = tooltip
 
 
 class MeasureResponsibilityForm(ModelForm):
@@ -407,7 +464,7 @@ strategy_crud = login_required_crud_paths(
 @login_required
 def strategy_card_list(request):
     active = active_strategy(request)
-    strategies = Strategy.objects.filter(is_active=True).order_by("sort_order", "title")
+    strategies = Strategy.objects.exclude(status=StrategyStatus.INACTIVE).order_by("sort_order", "title")
     return render(
         request,
         "strategies/strategy_card_list.html",
@@ -447,9 +504,15 @@ level_crud = login_required_crud_paths(
     create__fields__parent__choices=parent_level_choices_queryset,
     create__fields__parent__include=create_parent_field_include,
     create__fields__measure_type__include=level_has_measure_type,
+    create__fields__implementation_description__include=level_has_measure_schedule,
+    create__fields__implementation_description__after="description",
     create__fields__start_date__include=level_has_measure_schedule,
     create__fields__end_date__include=level_has_measure_schedule,
     create__fields__status__include=level_has_measure_schedule,
+    create__fields__total_effort__include=level_has_measure_schedule,
+    create__fields__total_effort__display_name="Aufwand total (PT)",
+    create__fields__total_cost__include=level_has_measure_schedule,
+    create__fields__total_cost__display_name="Kosten total (CHF)",
     edit__title=lambda form, **_: f"{strategy_level_label(form=form)} bearbeiten",
     edit__auto__exclude=AUDIT_FIELDS,
     edit__extra__redirect_to=strategy_level_redirect_to,
@@ -462,24 +525,43 @@ level_crud = login_required_crud_paths(
     edit__fields__strategy__include=False,
     edit__fields__parent__choices=parent_level_choices_queryset,
     edit__fields__parent__include=level_has_parent,
+    edit__fields__parent__display_name=parent_field_display_name,
+    edit__fields__parent__after="level",
     edit__fields__measure_type__include=level_has_measure_type,
+    edit__fields__implementation_description__include=level_has_measure_schedule,
+    edit__fields__implementation_description__after="description",
     edit__fields__start_date__include=level_has_measure_schedule,
     edit__fields__end_date__include=level_has_measure_schedule,
     edit__fields__status__include=level_has_measure_schedule,
+    edit__fields__total_effort__include=level_has_measure_schedule,
+    edit__fields__total_effort__display_name="Aufwand total (PT)",
+    edit__fields__total_cost__include=level_has_measure_schedule,
+    edit__fields__total_cost__display_name="Kosten total (CHF)",
     detail__title=lambda form, **_: form.instance.title,
     detail__auto__exclude=AUDIT_FIELDS,
+    detail__template="strategies/level_detail_form.html",
     detail__instance=lambda params, request, **_: StrategyLevel.objects.get(
         pk=params.pk,
         strategy_id=active_strategy_id(request),
     ),
     detail__fields__strategy__choices=lambda request, **_: Strategy.objects.filter(pk=active_strategy_id(request)),
     detail__fields__strategy__include=False,
+    detail__fields__level__include=detail_show_level_field,
     detail__fields__parent__choices=parent_level_choices_queryset,
-    detail__fields__parent__include=level_has_parent,
+    detail__fields__parent__include=detail_show_parent_field,
     detail__fields__measure_type__include=level_has_measure_type,
+    detail__fields__implementation_description__include=level_has_measure_schedule,
+    detail__fields__implementation_description__after="description",
+    detail__fields__status__after=0,
     detail__fields__start_date__include=level_has_measure_schedule,
     detail__fields__end_date__include=level_has_measure_schedule,
     detail__fields__status__include=level_has_measure_schedule,
+    detail__fields__total_effort__include=level_has_measure_schedule,
+    detail__fields__total_effort__display_name="Aufwand total (PT)",
+    detail__fields__total_cost__include=level_has_measure_schedule,
+    detail__fields__total_cost__display_name="Kosten total (CHF)",
+    detail__fields__sort_order__include=detail_show_sort_order_field,
+    detail__fields__sort_order__after=LAST,
     delete__title=lambda form, **_: f"Strategieebene loeschen: {form.instance.title}",
     delete__instance=lambda params, request, **_: StrategyLevel.objects.get(
         pk=params.pk,
@@ -571,8 +653,11 @@ handlungsfelder_table = Table(
     columns__id__include=False,
     columns__level__include=False,
     columns__description__include=False,
+    columns__implementation_description__include=False,
     columns__parent__include=False,
     columns__measure_type__include=False,
+    columns__total_effort__include=False,
+    columns__total_cost__include=False,
     columns__start_date__include=False,
     columns__end_date__include=False,
     columns__status__include=False,
@@ -606,7 +691,10 @@ ziele_table = Table(
     columns__strategy__include=False,
     columns__level__include=False,
     columns__description__include=False,
+    columns__implementation_description__include=False,
     columns__measure_type__include=False,
+    columns__total_effort__include=False,
+    columns__total_cost__include=False,
     columns__start_date__include=False,
     columns__end_date__include=False,
     columns__status__include=False,
@@ -639,7 +727,10 @@ massnahmen_table = Table(
     columns__strategy__include=False,
     columns__level__include=False,
     columns__description__include=False,
+    columns__implementation_description__include=False,
     columns__measure_type__include=False,
+    columns__total_effort__include=False,
+    columns__total_cost__include=False,
     columns__sort_order__include=False,
     columns__created_at__include=False,
     columns__updated_at__include=False,
@@ -659,13 +750,14 @@ massnahmen_table = Table(
         after="parent",
         cell__value=massnahme_responsible_people_display,
     ),
-    columns__start_date__display_name="Jahr von",
-    columns__start_date__after="responsible_people",
-    columns__start_date__cell__value=lambda row, **_: row.start_year_display,
-    columns__end_date__display_name="Jahr bis",
-    columns__end_date__after="start_date",
-    columns__end_date__cell__value=lambda row, **_: row.end_year_display,
-    columns__status__after="end_date",
+    columns__dauer=Column(
+        display_name="Dauer",
+        after="responsible_people",
+        cell__value=lambda row, **_: f"{row.start_year_display} - {row.end_year_display}".strip(" -"),
+    ),
+    columns__start_date__include=False,
+    columns__end_date__include=False,
+    columns__status__after="dauer",
     columns__title__cell__url=lambda row, **_: f"/strategies/levels/{row.pk}/",
     columns__edit=icon_edit_column(
         after=0,

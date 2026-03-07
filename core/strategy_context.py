@@ -3,7 +3,7 @@ from functools import wraps
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 
-from strategies.models import Strategy
+from strategies.models import Strategy, StrategyStatus
 
 
 ACTIVE_STRATEGY_SESSION_KEY = "active_strategy_id"
@@ -37,7 +37,7 @@ def require_active_strategy(view_func):
 
 
 def select_active_strategy(request, strategy_id):
-    strategy = get_object_or_404(Strategy, pk=strategy_id, is_active=True)
+    strategy = get_object_or_404(Strategy.objects.exclude(status=StrategyStatus.INACTIVE), pk=strategy_id)
     set_active_strategy(request, strategy)
     messages.success(request, f"Aktive Strategie gesetzt: {strategy.title}")
     return strategy

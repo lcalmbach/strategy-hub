@@ -118,6 +118,7 @@ INSTALLED_APPS = [
     "strategies",
     "controlling",
     "dashboard",
+    "reports",
 ]
 
 MIDDLEWARE = [

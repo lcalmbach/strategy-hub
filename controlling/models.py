@@ -121,6 +121,13 @@ class ControllingRecord(TimestampedModel, UserStampedModel):
         blank=True,
         default="",
     )
+    ampel_allgemein = models.CharField(
+        "Ampel Allgemein",
+        max_length=10,
+        choices=AmpelStatus.choices,
+        blank=True,
+        default="",
+    )
     plan_result_description = models.TextField("Plan-Ergebnis", blank=True)
     plan_effort_person_days = models.DecimalField(
         "Plan-Aufwand Personentage",
@@ -131,6 +138,7 @@ class ControllingRecord(TimestampedModel, UserStampedModel):
     plan_effort_description = models.TextField("Plan-Aufwand Beschreibung", blank=True)
     plan_cost_chf = models.DecimalField("Plan-Kosten CHF", max_digits=12, decimal_places=2, default=Decimal("0.00"))
     plan_cost_description = models.TextField("Plan-Kosten Beschreibung", blank=True)
+    remarks_planning = models.TextField("Bemerkungen zur Planung", blank=True)
     actual_fulfillment_percent = models.DecimalField(
         "Ist-Erfüllungsgrad Prozent",
         max_digits=5,
@@ -147,6 +155,7 @@ class ControllingRecord(TimestampedModel, UserStampedModel):
     actual_effort_description = models.TextField("Ist-Aufwand Beschreibung", blank=True)
     actual_cost_chf = models.DecimalField("Ist-Kosten CHF", max_digits=12, decimal_places=2, default=Decimal("0.00"))
     actual_cost_description = models.TextField("Ist-Kosten Beschreibung", blank=True)
+    remarks_controlling = models.TextField("Bemerkungen zum Controlling", blank=True)
 
     class Meta:
         ordering = ["-period__start_date", "measure__title"]

@@ -4,6 +4,25 @@ All notable changes to this project should be documented in this file.
 
 The format is based on Keep a Changelog, and the project uses Semantic Versioning.
 
+## [0.5.0] - 2026-03-07
+
+### Added
+
+- Neuer Bereich `Auswertungen` mit SQL-basierten Reports, Ausführung und XLSX-Download
+- Neues Report-Modell (`name`, `sql`, `params`, `description`) inkl. Admin und eigener Seite
+- Neue Organisationen-Verwaltung bei Personen inkl. FK von Person auf Organisation
+- Organisation erweitert um `Bereich`, `Abteilung` und `Kürzel`
+- Neue Massnahme-Felder: `Beschreibung Umsetzung`, `Aufwand total`, `Kosten total`
+- Neue Controlling-Record-Felder: `Bemerkungen zur Planung`, `Bemerkungen zum Controlling`, `Ampel Allgemein`
+- Verlinkte Unterlisten auf Strategieebenen-Detailseiten (Ziele, Massnahmen, Controlling-Records)
+
+### Changed
+
+- Button-Design vereinheitlicht auf die Header-Farbe
+- Menüstruktur und Benennungen überarbeitet (inkl. `Controlling`)
+- `Strategy.is_active` entfernt; Aktivität wird über `status` gesteuert
+- Listen-/Detailansichten für Handlungsfelder, Ziele und Massnahmen weiter bereinigt
+
 ## [0.4.0] - 2026-03-06
 
 ### Added

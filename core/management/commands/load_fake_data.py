@@ -15,7 +15,7 @@ from controlling.models import (
     ControllingRecordResponsibility,
     ControllingRecordStatus,
 )
-from people.models import Function, Person
+from people.models import Function, Organization, Person
 from strategies.models import (
     MeasureResponsibility,
     MeasureType,
@@ -128,6 +128,7 @@ class Command(BaseCommand):
         MeasureType.objects.all().delete()
         Strategy.objects.all().delete()
         Person.objects.all().delete()
+        Organization.objects.all().delete()
         Function.objects.all().delete()
 
         usernames = [row["username"] for row in read_csv("users.csv")]
@@ -136,6 +137,7 @@ class Command(BaseCommand):
     def _replace_people_data(self):
         self.stdout.write("Deleting existing imported people data...")
         Person.objects.all().delete()
+        Organization.objects.all().delete()
         Function.objects.all().delete()
 
         usernames = [row["username"] for row in read_csv("users.csv")]
@@ -179,14 +181,26 @@ class Command(BaseCommand):
         people_map = {}
         users = get_user_model().objects.in_bulk(field_name="username")
         functions = Function.objects.in_bulk(field_name="code")
+        organizations = {}
         for row in read_csv("people.csv"):
             user = users[row["username"]]
+            org_name = row.get("organizational_unit", "").strip()
+            organization = None
+            if org_name:
+                organization = organizations.get(org_name)
+                if organization is None:
+                    organization, _ = Organization.objects.get_or_create(
+                        bereich=org_name,
+                        abteilung="",
+                        defaults={"is_active": True},
+                    )
+                    organizations[org_name] = organization
             person, _ = Person.objects.update_or_create(
                 short_code=row["short_code"],
                 defaults={
                     "user": user,
                     "function": functions[row["function_code"]],
-                    "organizational_unit": row["organizational_unit"],
+                    "organization": organization,
                     "is_active_profile": as_bool(row["is_active_profile"]),
                 },
             )
@@ -222,7 +236,6 @@ class Command(BaseCommand):
                     "status": row["status"],
                     "vision": row["vision"],
                     "mission": row["mission"],
-                    "is_active": as_bool(row["is_active"]),
                 },
             )
             strategy.full_clean()

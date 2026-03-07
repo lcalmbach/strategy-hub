@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="de-ch">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Auswertungen</title>
+    <link rel="stylesheet" href="/static/css/iommi_main_menu.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: "Manrope", "Segoe UI", sans-serif;
+            background: #f3f7fb;
+            color: #12313a;
+        }
+        body.sidebar_menu_active {
+            margin-left: var(--iommi-menu-width);
+        }
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem 2rem;
+        }
+        .panel {
+            background: #fff;
+            border: 1px solid #d7e3eb;
+            border-radius: 14px;
+            box-shadow: 0 6px 20px rgba(18, 49, 58, 0.06);
+            padding: 1.2rem;
+        }
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+        .controls label {
+            display: block;
+            font-size: 0.85rem;
+            margin-bottom: 0.3rem;
+            font-weight: 700;
+        }
+        .controls select {
+            min-width: 320px;
+            padding: 0.5rem 0.65rem;
+            border: 1px solid #b6cad6;
+            border-radius: 10px;
+            font: inherit;
+            background: #fff;
+        }
+        .btn {
+            display: inline-block;
+            border: none;
+            border-radius: 10px;
+            padding: 0.58rem 0.95rem;
+            font: inherit;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: #2f5f73;
+            color: #fff;
+        }
+        .btn-secondary {
+            background: #2f5f73;
+            color: #fff;
+            margin-top: 0.9rem;
+        }
+        .error {
+            margin-top: 1rem;
+            padding: 0.75rem 0.85rem;
+            border-radius: 10px;
+            background: #fff1f2;
+            color: #9f1239;
+            border: 1px solid #fecdd3;
+            font-weight: 600;
+        }
+        .meta {
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            color: #36515f;
+        }
+        .table-wrap {
+            overflow: auto;
+            border: 1px solid #d7e3eb;
+            border-radius: 12px;
+            background: #fff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th,
+        td {
+            border-bottom: 1px solid #e3edf3;
+            padding: 0.55rem 0.65rem;
+            text-align: left;
+            white-space: nowrap;
+        }
+        th {
+            background: #edf5f9;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body class="{% if request.iommi_main_menu %}sidebar_menu_active{% endif %}">
+    {% if request.iommi_main_menu %}
+        {{ request.iommi_main_menu }}
+    {% endif %}
+
+    <main>
+        <h1>Auswertungen</h1>
+        <section class="panel">
+            <form method="post">
+                {% csrf_token %}
+                <div class="controls">
+                    <div>
+                        <label for="report">Auswertung</label>
+                        <select id="report" name="report" required>
+                            <option value="">Bitte wählen</option>
+                            {% for report in reports %}
+                                <option value="{{ report.id }}" {% if selected_report and selected_report.id == report.id %}selected{% endif %}>
+                                    {{ report.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Run</button>
+                </div>
+            </form>
+
+            {% if error_message %}
+                <div class="error">{{ error_message }}</div>
+            {% endif %}
+
+            {% if selected_report and not error_message %}
+                {% if selected_report.description %}
+                    <p class="meta">{{ selected_report.description }}</p>
+                {% endif %}
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                {% for column in columns %}
+                                    <th>{{ column }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                                <tr>
+                                    {% for value in row %}
+                                        <td>{{ value }}</td>
+                                    {% endfor %}
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="{{ columns|length|default:1 }}">Keine Daten gefunden.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <a class="btn btn-secondary" href="{% url 'reports:download' selected_report.id %}">Download XLSX</a>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

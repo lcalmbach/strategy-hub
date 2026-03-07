@@ -5,8 +5,8 @@ from .models import MeasureResponsibility, MeasureType, Strategy, StrategyLevel
 
 @admin.register(Strategy)
 class StrategyAdmin(admin.ModelAdmin):
-    list_display = ("sort_order", "short_code", "title", "status", "valid_from", "valid_until", "is_active")
-    list_filter = ("status", "is_active")
+    list_display = ("sort_order", "short_code", "title", "status", "valid_from", "valid_until")
+    list_filter = ("status",)
     search_fields = ("short_code", "title", "short_description")
 
 

@@ -23,7 +23,6 @@ class GenerateMissingRecordsForPeriodTest(TestCase):
             status="active",
             vision="Vision A",
             mission="Mission A",
-            is_active=True,
         )
         self.other_strategy = Strategy.objects.create(
             short_code="STR-B",
@@ -33,7 +32,6 @@ class GenerateMissingRecordsForPeriodTest(TestCase):
             status="active",
             vision="Vision B",
             mission="Mission B",
-            is_active=True,
         )
 
         handlungsfeld = StrategyLevel.objects.create(

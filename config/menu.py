@@ -42,23 +42,30 @@ main_menu = MainMenu(
             render=lambda user, **_: user.is_authenticated,
             attrs__class__is_disabled=lambda request, user, **_: user.is_authenticated and not has_active_strategy(request),
         ),
+        controlling_records=M(
+            view=lambda request: None,
+            url=lambda request, **_: "/controlling/records/" if has_active_strategy(request) else "#",
+            display_name="🔎 Controlling",
+            render=lambda user, **_: user.is_authenticated,
+            attrs__class__is_disabled=lambda request, user, **_: user.is_authenticated and not has_active_strategy(request),
+        ),
         controlling_perioden=M(
             view=lambda request: None,
             url="/controlling/periods/",
             display_name="🗓️ Controlling-Perioden",
             render=lambda user, **_: user.is_authenticated,
-        ),
-        controlling_records=M(
-            view=lambda request: None,
-            url=lambda request, **_: "/controlling/records/" if has_active_strategy(request) else "#",
-            display_name="🧾 Controlling-Records",
-            render=lambda user, **_: user.is_authenticated,
-            attrs__class__is_disabled=lambda request, user, **_: user.is_authenticated and not has_active_strategy(request),
+            attrs__class__menu_help_separator=True,
         ),
         personen=M(
             view=lambda request: None,
             url="/people/",
             display_name="👥 Personen",
+            render=lambda user, **_: user.is_authenticated,
+        ),
+        auswertungen=M(
+            view=lambda request: None,
+            url="/reports/",
+            display_name="📑 Auswertungen",
             render=lambda user, **_: user.is_authenticated,
         ),
         admin=M(

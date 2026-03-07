@@ -45,7 +45,6 @@ class Strategy(TimestampedModel, UserStampedModel):
     status = models.CharField("Status", max_length=20, choices=StrategyStatus.choices, default=StrategyStatus.PLANNED)
     vision = models.TextField("Vision")
     mission = models.TextField("Mission")
-    is_active = models.BooleanField("Aktiv", default=True)
 
     class Meta:
         ordering = ["sort_order", "title"]
@@ -95,6 +94,7 @@ class StrategyLevel(TimestampedModel, UserStampedModel, OrderedModel):
     title = models.CharField("Titel", max_length=255)
     short_code = models.CharField("Kürzel", max_length=50)
     description = models.TextField("Beschreibung", blank=True)
+    implementation_description = models.TextField("Beschreibung Umsetzung", blank=True)
     parent = models.ForeignKey(
         "self",
         verbose_name="Parent",
@@ -117,6 +117,20 @@ class StrategyLevel(TimestampedModel, UserStampedModel, OrderedModel):
         "Status",
         max_length=20,
         choices=MeasureStatus.choices,
+        null=True,
+        blank=True,
+    )
+    total_effort = models.DecimalField(
+        "Aufwand total",
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    total_cost = models.DecimalField(
+        "Kosten total",
+        max_digits=12,
+        decimal_places=2,
         null=True,
         blank=True,
     )
@@ -157,6 +171,12 @@ class StrategyLevel(TimestampedModel, UserStampedModel, OrderedModel):
                 errors["end_date"] = "Enddatum ist nur für Massnahmen erlaubt."
             if self.status:
                 errors["status"] = "Status ist nur für Massnahmen erlaubt."
+            if self.implementation_description:
+                errors["implementation_description"] = "Beschreibung Umsetzung ist nur für Massnahmen erlaubt."
+            if self.total_effort is not None:
+                errors["total_effort"] = "Aufwand total ist nur für Massnahmen erlaubt."
+            if self.total_cost is not None:
+                errors["total_cost"] = "Kosten total ist nur für Massnahmen erlaubt."
 
         if self.level == StrategyLevelType.ZIEL:
             if not self.parent_id:
@@ -171,6 +191,12 @@ class StrategyLevel(TimestampedModel, UserStampedModel, OrderedModel):
                 errors["end_date"] = "Enddatum ist nur für Massnahmen erlaubt."
             if self.status:
                 errors["status"] = "Status ist nur für Massnahmen erlaubt."
+            if self.implementation_description:
+                errors["implementation_description"] = "Beschreibung Umsetzung ist nur für Massnahmen erlaubt."
+            if self.total_effort is not None:
+                errors["total_effort"] = "Aufwand total ist nur für Massnahmen erlaubt."
+            if self.total_cost is not None:
+                errors["total_cost"] = "Kosten total ist nur für Massnahmen erlaubt."
 
         if self.level == StrategyLevelType.MASSNAHME:
             if not self.parent_id:

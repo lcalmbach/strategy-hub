@@ -59,7 +59,6 @@ class LoadFakeDataCommandTest(TestCase):
             status="active",
             vision="Vision",
             mission="Mission",
-            is_active=True,
         )
         self.handlungsfeld = StrategyLevel.objects.create(
             strategy=self.strategy,
