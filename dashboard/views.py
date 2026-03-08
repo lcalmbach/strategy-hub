@@ -8,6 +8,8 @@ from django.conf import settings
 from django.db.models import Count, Sum
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
+from django.middleware.csrf import get_token
+from django.urls import reverse
 from django.utils.text import slugify
 from django.utils.safestring import mark_safe
 from django.utils.html import escape, format_html, format_html_join
@@ -555,15 +557,55 @@ def profile_page(request):
 
 @login_required
 def help_page(request):
+    help_url = reverse("help")
+
+    if request.method == "POST":
+        markdown_content = request.POST.get("markdown_content", "")
+        HELP_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        HELP_FILE_PATH.write_text(markdown_content, encoding="utf-8")
+        return redirect(f"{help_url}?saved=1")
+
     if HELP_FILE_PATH.exists():
         markdown_content = HELP_FILE_PATH.read_text(encoding="utf-8")
     else:
         markdown_content = "# Hilfe\n\nDie Hilfedatei wurde nicht gefunden."
 
+    if request.GET.get("edit") == "1":
+        csrf_token = get_token(request)
+        edit_form_html = format_html(
+            """
+            <form method="post" action="{action}">
+                <input type="hidden" name="csrfmiddlewaretoken" value="{csrf_token}">
+                <p>
+                    <button type="submit">Speichern</button>
+                    <a href="{cancel_url}">Abbrechen</a>
+                </p>
+                <textarea name="markdown_content" rows="30" style="width:100%;font-family:monospace;">{content}</textarea>
+            </form>
+            """,
+            action=help_url,
+            csrf_token=csrf_token,
+            cancel_url=help_url,
+            content=markdown_content,
+        )
+        page = Page(
+            title="Hilfe bearbeiten",
+            parts__content=html.div(mark_safe(edit_form_html)),
+        )
+        return page.as_view()(request)
+
+    saved_notice = ""
+    if request.GET.get("saved") == "1":
+        saved_notice = '<p><strong>Hilfedatei wurde gespeichert.</strong></p>'
+
     page = Page(
         title="Hilfe",
         parts__content=html.div(
-            mark_safe(render_markdown_content(markdown_content)),
+            mark_safe(
+                saved_notice
+                + f'<p><a href="{help_url}?edit=1">Bearbeiten</a></p>'
+                + render_markdown_content(markdown_content)
+            ),
         ),
     )
     return page.as_view()(request)

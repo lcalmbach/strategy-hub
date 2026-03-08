@@ -4,6 +4,12 @@ All notable changes to this project should be documented in this file.
 
 The format is based on Keep a Changelog, and the project uses Semantic Versioning.
 
+## [0.6.0] - 2026-03-08
+
+### Added
+
+- Hilfeseite kann direkt in der App bearbeitet werden (`Bearbeiten`, `Speichern`, `Abbrechen`) mit Persistenz nach `docs/HILFE.md`
+
 ## [0.5.0] - 2026-03-07
 
 ### Added

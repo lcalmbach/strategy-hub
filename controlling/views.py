@@ -324,7 +324,7 @@ record_crud = login_required_crud_paths(
             .order_by("person__short_code"),
             to_attr="prefetched_responsibilities",
         )
-    ),
+    ).order_by("-period__start_date", "measure__sort_order", "measure__title", "pk"),
     table__columns__id__include=False,
     table__columns__measure__display_name="Massnahme",
     table__columns__measure__include=True,
