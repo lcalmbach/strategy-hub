@@ -4,6 +4,12 @@ All notable changes to this project should be documented in this file.
 
 The format is based on Keep a Changelog, and the project uses Semantic Versioning.
 
+## [0.5.1] - 2026-03-09
+
+### Changed
+
+- Version auf `0.5.1` gesetzt
+
 ## [0.6.0] - 2026-03-08
 
 ### Added
